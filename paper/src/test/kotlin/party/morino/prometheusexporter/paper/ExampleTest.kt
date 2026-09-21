@@ -7,7 +7,7 @@
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
-package party.morino.pluginname.paper
+package party.morino.prometheusexporter.paper
 
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
@@ -18,7 +18,7 @@ import org.mockbukkit.mockbukkit.ServerMock
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
 
-@ExtendWith(PluginNameTest::class)
+@ExtendWith(MoripaPrometheusExporterTest::class)
 class ExampleTest : KoinTest {
 
     private val server: ServerMock by inject()
@@ -26,7 +26,7 @@ class ExampleTest : KoinTest {
     @Test
     @DisplayName("Plugin is enabled successfully")
     fun pluginIsEnabled() {
-        val plugin = PluginNameTest.plugin
+        val plugin = MoripaPrometheusExporterTest.plugin
         assertNotNull(plugin)
         assertTrue(plugin.isEnabled)
     }
@@ -35,7 +35,7 @@ class ExampleTest : KoinTest {
     @DisplayName("Server has the plugin loaded")
     fun serverHasPlugin() {
         val pluginManager = server.pluginManager
-        val plugin = pluginManager.getPlugin("PluginName")
+        val plugin = pluginManager.getPlugin("MoripaPrometheusExporter")
         assertNotNull(plugin)
     }
 }

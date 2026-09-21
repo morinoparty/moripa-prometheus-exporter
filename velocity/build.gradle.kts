@@ -11,6 +11,8 @@ plugins {
     java
     alias(libs.plugins.kotlin.jvm)
     alias(libs.plugins.kotlin.serialization)
+    // Kotlin ソースの @Plugin を Velocity のアノテーションプロセッサで処理し velocity-plugin.json を生成する
+    alias(libs.plugins.kotlin.kapt)
     alias(libs.plugins.shadow)
 }
 
@@ -21,7 +23,8 @@ dependencies {
     implementation(project(":common"))
     implementation(project(":api"))
     compileOnly(libs.velocity.api)
-    annotationProcessor(libs.velocity.api)
+    // annotationProcessor は Java ソースにしか効かないため、Kotlin では kapt を使う
+    kapt(libs.velocity.api)
 
     implementation(libs.bundles.commands.velocity)
 

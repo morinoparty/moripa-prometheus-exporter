@@ -126,3 +126,7 @@ run/
 **/node_modules/*
 docs/.docusaurus/*
 docs/static/dokka/*
+
+# .agent/build.sh で生成される AI エージェント向けの指示ファイル (task agent で再生成する)
+CLAUDE.md
+AGENTS.md

@@ -14,6 +14,8 @@ import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
 plugins {
     java
     alias(libs.plugins.kotlin.jvm)
+    // kapt は kotlin-gradle-plugin に同梱されているため、ルートでバージョンを解決してから各モジュールで alias できるようにする
+    alias(libs.plugins.kotlin.kapt) apply false
     alias(libs.plugins.dokka)
     alias(libs.plugins.ktlint)
     alias(libs.plugins.spotless)

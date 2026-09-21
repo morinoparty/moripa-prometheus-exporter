@@ -1,12 +1,12 @@
 # Version Control
 
-- ブランチを切る際は、masterブランチから切り、プルリクエストは必ず masterブランチに対して行うこと
-- ブランチを切ってから、作業を始める前に、masterブランチの最新の状態を取り込み、ブランチを切って作業をすること
+- ブランチを切る際は、mainブランチから切り、プルリクエストは必ず mainブランチに対して行うこと
+- ブランチを切ってから、作業を始める前に、mainブランチの最新の状態を取り込み、ブランチを切って作業をすること
 - また、pushやprを作成する前に確認すること
 - 別の作業があったとしても、できるだけすべてのファイルをステージングの対象とすること
 
 ## Repository
-- [PluginName](https://github.com/morinoparty/PluginName)
+- [moripa-prometheus-exporter](https://github.com/morinoparty/moripa-prometheus-exporter)
 
 ## コミットメッセージ
 - コミットメッセージは英語で書き、以下のような形式で書く。

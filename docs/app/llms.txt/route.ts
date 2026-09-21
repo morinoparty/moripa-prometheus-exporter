@@ -12,9 +12,9 @@ export async function GET() {
 		return `- [${title}](${url}): ${description}`;
 	});
 
-	const content = `# PluginName Documentation
+	const content = `# MoripaPrometheusExporter Documentation
 
-> PluginName is a Minecraft plugin.
+> MoripaPrometheusExporter is a Prometheus exporter plugin for Minecraft (Paper / Velocity) that exposes player count, TPS and other server metrics for Grafana.
 
 ## Documentation Pages
 

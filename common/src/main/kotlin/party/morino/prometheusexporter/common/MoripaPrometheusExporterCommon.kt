@@ -7,9 +7,9 @@
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
-package party.morino.pluginname.common
+package party.morino.prometheusexporter.common
 
-object PluginNameCommon {
+object MoripaPrometheusExporterCommon {
     fun init() {
         // 共通初期化ロジック
     }

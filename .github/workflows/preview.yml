@@ -20,7 +20,7 @@ env:
   S3_UPLOAD_BUCKET: ${{ secrets.S3_UPLOAD_BUCKET }}
   S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
   PREVIEW_BASE_URL: ${{ vars.PREVIEW_BASE_URL }}
-  PROJECT_NAME: PluginName
+  PROJECT_NAME: MoripaPrometheusExporter
 
 jobs:
   # 共通の前処理：コミットSHAを取得
@@ -263,6 +263,25 @@ jobs:
           name: gradle-artifacts
           path: ./artifacts/gradle-artifacts
 
+      # コメントに載せる JAR のサイズを計算する
+      - name: Get JAR sizes
+        id: jar-sizes
+        run: |
+          # バイト数を読みやすい単位に変換する (1 MiB 以上は MB、それ未満は KB)
+          human_size() {
+            local bytes
+            bytes=$(stat -c %s "$1")
+            if [ "$bytes" -ge 1048576 ]; then
+              awk -v b="$bytes" 'BEGIN { printf "%.1f MB", b / 1048576 }'
+            else
+              awk -v b="$bytes" 'BEGIN { printf "%.1f KB", b / 1024 }'
+            fi
+          }
+          JARS=./artifacts/gradle-artifacts/jars
+          echo "paper=$(human_size "$JARS/${{ env.PROJECT_NAME }}-paper-${{ env.COMMIT_SHORT_SHA }}.jar")" >> $GITHUB_OUTPUT
+          echo "velocity=$(human_size "$JARS/${{ env.PROJECT_NAME }}-velocity-${{ env.COMMIT_SHORT_SHA }}.jar")" >> $GITHUB_OUTPUT
+          echo "api=$(human_size "$JARS/${{ env.PROJECT_NAME }}-api-${{ env.COMMIT_SHORT_SHA }}.jar")" >> $GITHUB_OUTPUT
+
       - name: Get limit time
         id: limit-time
         run: |
@@ -283,11 +302,11 @@ jobs:
           ## 🚀 Preview of ${{ github.event.repository.name }}
 
           ### 📦 Preview JARs ([Release Page]($RELEASE_URL))
-          | Artifact | Download |
-          |----------|----------|
-          | Paper | [${{ env.PROJECT_NAME }}-paper-${{ env.COMMIT_SHORT_SHA }}.jar]($RELEASE_DOWNLOAD_BASE/${{ env.PROJECT_NAME }}-paper-${{ env.COMMIT_SHORT_SHA }}.jar) |
-          | Velocity | [${{ env.PROJECT_NAME }}-velocity-${{ env.COMMIT_SHORT_SHA }}.jar]($RELEASE_DOWNLOAD_BASE/${{ env.PROJECT_NAME }}-velocity-${{ env.COMMIT_SHORT_SHA }}.jar) |
-          | API | [${{ env.PROJECT_NAME }}-api-${{ env.COMMIT_SHORT_SHA }}.jar]($RELEASE_DOWNLOAD_BASE/${{ env.PROJECT_NAME }}-api-${{ env.COMMIT_SHORT_SHA }}.jar) |
+          | Artifact | Download | Size |
+          |----------|----------|------|
+          | Paper | [${{ env.PROJECT_NAME }}-paper-${{ env.COMMIT_SHORT_SHA }}.jar]($RELEASE_DOWNLOAD_BASE/${{ env.PROJECT_NAME }}-paper-${{ env.COMMIT_SHORT_SHA }}.jar) | ${{ steps.jar-sizes.outputs.paper }} |
+          | Velocity | [${{ env.PROJECT_NAME }}-velocity-${{ env.COMMIT_SHORT_SHA }}.jar]($RELEASE_DOWNLOAD_BASE/${{ env.PROJECT_NAME }}-velocity-${{ env.COMMIT_SHORT_SHA }}.jar) | ${{ steps.jar-sizes.outputs.velocity }} |
+          | API | [${{ env.PROJECT_NAME }}-api-${{ env.COMMIT_SHORT_SHA }}.jar]($RELEASE_DOWNLOAD_BASE/${{ env.PROJECT_NAME }}-api-${{ env.COMMIT_SHORT_SHA }}.jar) | ${{ steps.jar-sizes.outputs.api }} |
 
           > 📜 **Attestation**: \`gh attestation verify <jar-file> --owner morinoparty\`
 

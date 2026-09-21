@@ -47,25 +47,25 @@ jobs:
       # ファイル名を変更
       - name: Rename artifacts
         run: |
-          mv ./paper/build/libs/paper-*-all.jar ./paper/build/libs/PluginName-paper-${{ env.PLUGIN_VERSION }}.jar
-          mv ./velocity/build/libs/velocity-*-all.jar ./velocity/build/libs/PluginName-velocity-${{ env.PLUGIN_VERSION }}.jar
+          mv ./paper/build/libs/paper-*-all.jar ./paper/build/libs/MoripaPrometheusExporter-paper-${{ env.PLUGIN_VERSION }}.jar
+          mv ./velocity/build/libs/velocity-*-all.jar ./velocity/build/libs/MoripaPrometheusExporter-velocity-${{ env.PLUGIN_VERSION }}.jar
 
       # GitHub Attestations で署名（Paper）
       - name: Attest Paper JAR artifact
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: './paper/build/libs/PluginName-paper-${{ env.PLUGIN_VERSION }}.jar'
+          subject-path: './paper/build/libs/MoripaPrometheusExporter-paper-${{ env.PLUGIN_VERSION }}.jar'
 
       # GitHub Attestations で署名（Velocity）
       - name: Attest Velocity JAR artifact
         uses: actions/attest-build-provenance@v2
         with:
-          subject-path: './velocity/build/libs/PluginName-velocity-${{ env.PLUGIN_VERSION }}.jar'
+          subject-path: './velocity/build/libs/MoripaPrometheusExporter-velocity-${{ env.PLUGIN_VERSION }}.jar'
 
       # GitHub リリースにアップロード
       - name: Upload to GitHub Release
         run: |
           gh release upload ${{ github.event.release.tag_name }} \
-            ./paper/build/libs/PluginName-paper-${{ env.PLUGIN_VERSION }}.jar \
-            ./velocity/build/libs/PluginName-velocity-${{ env.PLUGIN_VERSION }}.jar \
+            ./paper/build/libs/MoripaPrometheusExporter-paper-${{ env.PLUGIN_VERSION }}.jar \
+            ./velocity/build/libs/MoripaPrometheusExporter-velocity-${{ env.PLUGIN_VERSION }}.jar \
             --clobber

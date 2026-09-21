@@ -1,0 +1,64 @@
+---
+title: Build Constants
+description: Gradle が生成するビルド時定数と Velocity の velocity-plugin.json 生成
+---
+
+# ビルド時定数 (BuildConstants)
+
+このプロジェクトでは、ビルドのたびに Gradle が `BuildConstants.kt` を生成し、Gradle 側の値を Kotlin の `const val` として参照できるようにしています。
+生成処理は `common/build.gradle.kts` の `generateBuildConstants` タスクで行い、出力先は `common/build/generated/sources/buildConstants/kotlin/main/` です。
+
+## 定数の一覧
+
+| 定数 | 値の由来 | 主な用途 |
+|------|---------|---------|
+| `BuildConstants.VERSION` | `gradle.properties` の `version` | Velocity の `@Plugin(version = ...)` |
+| `BuildConstants.KOTLIN_VERSION` | `gradle/libs.versions.toml` の `kotlin` | Paper の `PluginLoader` が解決する `kotlin-stdlib` のバージョン |
+
+`const val` として生成されるため、アノテーション引数のようにコンパイル時定数が必要な場所でもそのまま利用できます。
+Paper の `PluginLoader` はプラグイン本体のクラスがロードされる前に実行されますが、`const val` はコンパイル時にインライン化されるので、`BuildConstants` クラスへの実行時参照は残りません。
+
+```kotlin
+// Velocity: @Plugin の version を gradle.properties と連動させる
+@Plugin(
+    id = "moripa-prometheus-exporter",
+    name = "MoripaPrometheusExporter",
+    version = BuildConstants.VERSION,
+)
+class MoripaPrometheusExporter
+
+// Paper: ビルドに使った Kotlin と同じバージョンの stdlib を解決する
+resolver.addDependency(
+    Dependency(DefaultArtifact("org.jetbrains.kotlin:kotlin-stdlib:${BuildConstants.KOTLIN_VERSION}"), null),
+)
+```
+
+## パッケージ名を変更した場合
+
+生成されるファイルのパッケージは `common/build.gradle.kts` の `basePackage` で決まります。
+パッケージ名を変更した際は、この値も合わせて書き換えてください。
+
+```kotlin
+// common/build.gradle.kts
+val basePackage = "party.morino.prometheusexporter"
+```
+
+## Velocity の velocity-plugin.json 生成
+
+Velocity はプラグインの認識に `velocity-plugin.json` を必要とし、通常は `@Plugin` アノテーションをアノテーションプロセッサが処理して生成します。
+Gradle の `annotationProcessor` 構成は Java ソースにしか適用されないため、Kotlin ソースでは kapt を使って処理しています。
+
+```kotlin
+// velocity/build.gradle.kts
+plugins {
+    alias(libs.plugins.kotlin.kapt)
+}
+
+dependencies {
+    compileOnly(libs.velocity.api)
+    kapt(libs.velocity.api)
+}
+```
+
+kapt は kotlin-gradle-plugin に同梱されているため、ルートの `build.gradle.kts` で `alias(libs.plugins.kotlin.kapt) apply false` としてバージョンを解決しておく必要があります。
+生成された `velocity-plugin.json` はビルド後の JAR に含まれます。

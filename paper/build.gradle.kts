@@ -63,10 +63,10 @@ sourceSets.main {
         paperPluginYaml {
             name = rootProject.name
             version = project.version.toString()
-            website = "https://github.com/morinoparty/PluginName"
-            main = "$group.pluginname.paper.PluginName"
-            bootstrapper = "$group.pluginname.paper.PluginNameBootstrap"
-            loader = "$group.pluginname.paper.PluginNameLoader"
+            website = "https://github.com/morinoparty/moripa-prometheus-exporter"
+            main = "$group.prometheusexporter.paper.MoripaPrometheusExporter"
+            bootstrapper = "$group.prometheusexporter.paper.MoripaPrometheusExporterBootstrap"
+            loader = "$group.prometheusexporter.paper.MoripaPrometheusExporterLoader"
             apiVersion = "26.2"
         }
     }

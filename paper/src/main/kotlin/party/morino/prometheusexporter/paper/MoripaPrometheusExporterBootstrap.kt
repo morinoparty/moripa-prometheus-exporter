@@ -7,7 +7,7 @@
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
-package party.morino.pluginname.paper
+package party.morino.prometheusexporter.paper
 
 import io.papermc.paper.command.brigadier.CommandSourceStack
 import io.papermc.paper.plugin.bootstrap.BootstrapContext
@@ -16,10 +16,9 @@ import io.papermc.paper.plugin.bootstrap.PluginProviderContext
 import org.bukkit.plugin.java.JavaPlugin
 import org.incendo.cloud.execution.ExecutionCoordinator
 import org.incendo.cloud.paper.PaperCommandManager
-import party.morino.pluginname.paper.commands.ExampleCommand
 
 @Suppress("unused", "UnstableApiUsage")
-class PluginNameBootstrap : PluginBootstrap {
+class MoripaPrometheusExporterBootstrap : PluginBootstrap {
 
     override fun bootstrap(context: BootstrapContext) {
         val commandManager: PaperCommandManager<CommandSourceStack> =
@@ -28,10 +27,10 @@ class PluginNameBootstrap : PluginBootstrap {
                 .executionCoordinator(ExecutionCoordinator.asyncCoordinator())
                 .buildBootstrapped(context)
 
-        ExampleCommand(commandManager).register()
+        // TODO: エクスポーター用のコマンド（設定リロードなど）はここで commandManager に登録する
     }
 
     override fun createPlugin(context: PluginProviderContext): JavaPlugin {
-        return PluginName()
+        return MoripaPrometheusExporter()
     }
 }

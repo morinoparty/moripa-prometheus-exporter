@@ -1,6 +1,18 @@
-# PluginTemplateKt
+# moripa-prometheus-exporter
 
-morinoparty の Minecraft プラグインテンプレートです。Paper / Velocity 両対応のマルチモジュール構成になっています。
+morinoparty の Minecraft サーバー向け Prometheus exporter プラグインです。
+プレイヤー人数やサーバーの TPS などのメトリクスを Prometheus 形式で公開し、Grafana で可視化することを目的としています。
+Paper / Velocity 両対応のマルチモジュール構成になっています。
+
+📖 ドキュメント: https://prometheus-exporter.plugin.morino.party/
+
+## 公開を予定しているメトリクス
+
+| メトリクス | 対象 |
+|-----------|------|
+| オンラインプレイヤー数 | Paper / Velocity |
+| TPS / MSPT | Paper |
+| JVM メモリ使用量などのランタイム情報 | Paper / Velocity |
 
 ## モジュール構成
 
@@ -29,42 +41,21 @@ morinoparty の Minecraft プラグインテンプレートです。Paper / Velo
 - **Node.js** 26+ / **pnpm** 10+ (ドキュメントビルド用)
 - **[Task](https://taskfile.dev/)** (タスクランナー、任意)
 
-## セットアップ
+## 開発
 
-### 1. テンプレートからリポジトリを作成
+### AI エージェント向け指示ファイルの生成
 
-GitHub の "Use this template" ボタンからリポジトリを作成するか、クローンしてください。
-
-### 2. プロジェクト名の変更
-
-テンプレートのプレースホルダーを自分のプラグイン名に一括置換します。
+`CLAUDE.md` / `AGENTS.md` は `.agent/rules/` から生成されるファイルで、git には含めていません (`.gitignore` 済み)。
+clone 直後や `.agent/rules/` を編集したときに生成してください。
 
 ```bash
-# 例: "PluginName" を "MyPlugin" に変更する場合
+bash .agent/build.sh
 
-# 1. settings.gradle.kts のルートプロジェクト名
-#    rootProject.name = "MyPlugin"
-
-# 2. パッケージ名の変更
-#    party.morino.pluginname → party.morino.myplugin
-#    ディレクトリ名も合わせてリネーム
-
-# 3. クラス名の変更
-#    PluginName → MyPlugin
-#    PluginNameAPI → MyPluginAPI
-#    PluginNameCommon → MyPluginCommon
-
-# 4. 設定ファイルの更新
-#    - paper/build.gradle.kts: main クラスのパス、website URL
-#    - velocity PluginName.kt: @Plugin アノテーションの id, name
-#    - CLAUDE.md: プロジェクト名、リポジトリ URL
-#    - docs/app/layout.tsx: メタデータ
-#    - docs/app/layout.config.tsx: タイトル、GitHub URL
-#    - .github/workflows/preview.yml: PROJECT_NAME
-#    - .github/workflows/upload.yml: JAR ファイル名
+# または Task を使用
+task agent
 ```
 
-### 3. ビルド
+### ビルド
 
 ```bash
 # Gradle ビルド
@@ -74,7 +65,7 @@ GitHub の "Use this template" ボタンからリポジトリを作成するか�
 task build
 ```
 
-### 4. 開発サーバー起動
+### 開発サーバー起動
 
 ```bash
 # Paper テストサーバー
@@ -84,7 +75,7 @@ task build
 task run
 ```
 
-### 5. ドキュメント開発
+### ドキュメント開発
 
 ```bash
 cd docs
@@ -94,29 +85,6 @@ pnpm dev
 # または Task を使用
 task docs
 ```
-
-## 初期化チェックリスト
-
-テンプレートから新しいプラグインを作成する際に行うべき作業の一覧です。
-
-- [ ] リポジトリ名を変更
-- [ ] `settings.gradle.kts` の `rootProject.name` を変更
-- [ ] パッケージ名 `party.morino.pluginname` を変更
-- [ ] ソースディレクトリ名をパッケージ名に合わせてリネーム
-- [ ] クラス名 (`PluginName`, `PluginNameAPI`, `PluginNameCommon`) を変更
-- [ ] `paper/build.gradle.kts` のメインクラスパス・website を変更
-- [ ] `velocity/.../PluginName.kt` の `@Plugin` アノテーションを変更
-- [ ] `CLAUDE.md` のプロジェクト説明とリポジトリ URL を変更
-- [ ] `docs/app/layout.tsx` のメタデータを変更
-- [ ] `docs/app/layout.config.tsx` のタイトルと GitHub URL を変更
-- [ ] `docs/app/llms.txt/route.ts` のプラグイン名を変更
-- [ ] `docs/package.json` の `name` を変更
-- [ ] `.github/workflows/preview.yml` の `PROJECT_NAME` を変更
-- [ ] `.github/workflows/upload.yml` の JAR ファイル名を変更
-- [ ] GitHub リポジトリの Settings で GitHub Pages を有効化
-- [ ] GitHub リポジトリの Secrets に S3 認証情報を設定 (プレビュー機能を使う場合)
-- [ ] 不要な初期サンプルコード (`ExampleCommand`) を削除
-- [ ] `config/spotless/license-header.kt` の著者名を変更し、`task license` でヘッダーを付け直す
 
 ## Task コマンド一覧
 
@@ -129,6 +97,18 @@ task docs
 | `task clear` | session.lock ファイルを削除 |
 | `task license` | ライセンスヘッダーを付与・更新 (`spotlessApply`) |
 | `task license:check` | ライセンスヘッダーを検証 (`spotlessCheck`) |
+| `task agent` | `.agent/rules/` から `CLAUDE.md` / `AGENTS.md` を生成 |
+
+## ビルド時定数 (BuildConstants)
+
+`common/build.gradle.kts` の `generateBuildConstants` タスクが、ビルドのたびに `BuildConstants.kt` を生成します。
+
+| 定数 | 値の由来 | 主な用途 |
+|------|---------|---------|
+| `BuildConstants.VERSION` | `gradle.properties` の `version` | Velocity の `@Plugin(version = ...)` |
+| `BuildConstants.KOTLIN_VERSION` | `gradle/libs.versions.toml` の `kotlin` | Paper の `PluginLoader` が解決する `kotlin-stdlib` のバージョン |
+
+Velocity モジュールでは kapt で `@Plugin` を処理して `velocity-plugin.json` を生成しています。
 
 ## GitHub Actions
 
@@ -137,8 +117,8 @@ task docs
 | `check_pull_request.yml` | Pull Request | ビルドチェック |
 | `preview.yml` | Pull Request | プレビュービルド・S3 アップロード・PR コメント |
 | `upload.yml` | Release published | GitHub Release にJAR をアップロード |
-| `release.yml` | Push to master | Release Drafter でドラフトリリース作成 |
-| `deploy_docs.yml` | Push to master (docs/) | GitHub Pages にドキュメントデプロイ |
+| `release.yml` | Push to main | Release Drafter でドラフトリリース作成 |
+| `deploy_docs.yml` | Push to main (docs/) | GitHub Pages (`prometheus-exporter.plugin.morino.party`) にドキュメントデプロイ |
 | `dependabot_auto_merge.yml` | Dependabot PR | 自動マージ |
 | `sync-label.yml` | labels.json 変更 | GitHub ラベル同期 |
 

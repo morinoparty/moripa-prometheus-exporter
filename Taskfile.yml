@@ -41,3 +41,8 @@ tasks:
     cmds:
       - ./gradlew spotlessCheck
     silent: false
+  agent:
+    desc: Generate CLAUDE.md / AGENTS.md from .agent/rules
+    cmds:
+      - bash .agent/build.sh
+    silent: false
