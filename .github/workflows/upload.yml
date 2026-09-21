@@ -1,0 +1,71 @@
+name: upload_release
+
+on:
+  release:
+    types: [ published ]
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GITHUB_ACTOR: ${{ secrets.GITHUB_ACTOR }}
+
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - uses: actions/setup-java@c5195efecf7bdfc987ee8bae7a71cb8b11521c00 # v4.7.1
+        with:
+          distribution: 'temurin'
+          java-version: '25'
+
+      # Gradle キャッシュの設定（setup-gradle を使用）
+      - uses: gradle/actions/setup-gradle@8379f6a1328ee0e06e2bb424dadb7b159856a326 # v4.4.0
+
+      - name: Change wrapper permissions
+        run: chmod +x ./gradlew
+
+      - name: Set version env
+        run: |
+          before="${{ github.event.release.tag_name }}"
+          after="${before//v/}"
+          echo "PLUGIN_VERSION=$after" >> $GITHUB_ENV
+
+      - name: change plugin.yml version
+        run: |
+          sed -i "s/VersionPlaceholder/${{ env.PLUGIN_VERSION }}/" ./gradle.properties
+
+      # 並列ビルド
+      - name: Build with Gradle (parallel)
+        run: ./gradlew build -x test --parallel
+
+      # ファイル名を変更
+      - name: Rename artifacts
+        run: |
+          mv ./paper/build/libs/paper-*-all.jar ./paper/build/libs/PluginName-paper-${{ env.PLUGIN_VERSION }}.jar
+          mv ./velocity/build/libs/velocity-*-all.jar ./velocity/build/libs/PluginName-velocity-${{ env.PLUGIN_VERSION }}.jar
+
+      # GitHub Attestations で署名（Paper）
+      - name: Attest Paper JAR artifact
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: './paper/build/libs/PluginName-paper-${{ env.PLUGIN_VERSION }}.jar'
+
+      # GitHub Attestations で署名（Velocity）
+      - name: Attest Velocity JAR artifact
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-path: './velocity/build/libs/PluginName-velocity-${{ env.PLUGIN_VERSION }}.jar'
+
+      # GitHub リリースにアップロード
+      - name: Upload to GitHub Release
+        run: |
+          gh release upload ${{ github.event.release.tag_name }} \
+            ./paper/build/libs/PluginName-paper-${{ env.PLUGIN_VERSION }}.jar \
+            ./velocity/build/libs/PluginName-velocity-${{ env.PLUGIN_VERSION }}.jar \
+            --clobber

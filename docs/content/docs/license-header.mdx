@@ -1,0 +1,37 @@
+---
+title: License Header
+description: Spotless によるライセンスヘッダーの付与と検証
+---
+
+# ライセンスヘッダー
+
+このテンプレートでは、Kotlin ソースおよび `*.gradle.kts` に CC0 のライセンスヘッダーを [Spotless](https://github.com/diffplug/spotless) で付与します。
+
+## ヘッダーの管理
+
+ヘッダー本文は `config/spotless/license-header.kt` に一元管理されています。
+`$YEAR` トークンは実行時に年へ置き換えられ、既にヘッダーがあるファイルは `開始年-現在年` の範囲に更新されます (例: `2023` → `2023-2026`)。
+
+テンプレートから新しいプラグインを作成した際は、このファイルの著者名を書き換えたうえで、下記のコマンドでヘッダーを付け直してください。
+
+## コマンド
+
+```bash
+# ヘッダーを付与・更新する
+task license          # = ./gradlew spotlessApply
+
+# ヘッダーが正しく付いているか検証する
+task license:check    # = ./gradlew spotlessCheck
+```
+
+## 対象ファイル
+
+| 種類 | 対象 |
+|------|------|
+| Kotlin ソース | `api/src/**/*.kt`, `common/src/**/*.kt`, `paper/src/**/*.kt`, `velocity/src/**/*.kt` |
+| Gradle スクリプト | ルートおよび各モジュールの `*.gradle.kts` |
+
+## ビルドとの関係
+
+`isEnforceCheck = false` を設定しているため、`./gradlew build` や `check` はヘッダーの有無で失敗しません。
+ktlint / detekt と同様に、開発者が任意のタイミングで `task license` を実行する運用です。

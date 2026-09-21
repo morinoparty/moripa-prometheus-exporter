@@ -1,0 +1,43 @@
+# https://taskfile.dev
+
+version: '3'
+
+tasks:
+  docs:
+    desc: Start docs development server
+    dir: docs
+    cmds:
+      - pnpm install
+      - pnpm dev
+    silent: true
+  build:
+    desc: Build all modules
+    cmds:
+      - ./gradlew clean build
+    silent: true
+  run:
+    desc: Run Paper development server
+    cmds:
+      - ./gradlew clean :paper:runServer
+    silent: true
+  clear:
+    desc: Remove session.lock files
+    cmds:
+      - rm -f ./paper/run/**/session.lock
+    silent: true
+  check:
+    desc: Format and build
+    cmds:
+      - ./gradlew clean ktlintFormat
+      - task build
+    silent: false
+  license:
+    desc: Add or update license headers (spotlessApply)
+    cmds:
+      - ./gradlew spotlessApply
+    silent: false
+  license:check:
+    desc: Verify license headers (spotlessCheck)
+    cmds:
+      - ./gradlew spotlessCheck
+    silent: false
