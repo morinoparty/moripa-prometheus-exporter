@@ -4,6 +4,8 @@ morinoparty の Minecraft サーバー向け Prometheus exporter プラグイン
 プレイヤー人数やサーバーの TPS などのメトリクスを Prometheus 形式で公開し、Grafana で可視化することを目的としています。
 Paper / Velocity 両対応のマルチモジュール構成になっています。
 
+📖 ドキュメント: https://prometheus-exporter.plugin.morino.party/
+
 ## 公開を予定しているメトリクス
 
 | メトリクス | 対象 |
@@ -116,7 +118,7 @@ Velocity モジュールでは kapt で `@Plugin` を処理して `velocity-plug
 | `preview.yml` | Pull Request | プレビュービルド・S3 アップロード・PR コメント |
 | `upload.yml` | Release published | GitHub Release にJAR をアップロード |
 | `release.yml` | Push to main | Release Drafter でドラフトリリース作成 |
-| `deploy_docs.yml` | Push to main (docs/) | GitHub Pages にドキュメントデプロイ |
+| `deploy_docs.yml` | Push to main (docs/) | GitHub Pages (`prometheus-exporter.plugin.morino.party`) にドキュメントデプロイ |
 | `dependabot_auto_merge.yml` | Dependabot PR | 自動マージ |
 | `sync-label.yml` | labels.json 変更 | GitHub ラベル同期 |
 
