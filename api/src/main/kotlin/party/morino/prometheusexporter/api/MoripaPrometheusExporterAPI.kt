@@ -7,17 +7,17 @@
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
-package party.morino.pluginname.api
+package party.morino.prometheusexporter.api
 
-interface PluginNameAPI {
+interface MoripaPrometheusExporterAPI {
     companion object {
-        private var instance: PluginNameAPI? = null
+        private var instance: MoripaPrometheusExporterAPI? = null
 
-        fun getInstance(): PluginNameAPI {
-            return checkNotNull(instance) { "PluginNameAPI is not initialized" }
+        fun getInstance(): MoripaPrometheusExporterAPI {
+            return checkNotNull(instance) { "MoripaPrometheusExporterAPI is not initialized" }
         }
 
-        fun setInstance(api: PluginNameAPI) {
+        fun setInstance(api: MoripaPrometheusExporterAPI) {
             instance = api
         }
     }

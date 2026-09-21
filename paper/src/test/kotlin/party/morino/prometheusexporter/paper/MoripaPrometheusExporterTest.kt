@@ -7,7 +7,7 @@
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
-package party.morino.pluginname.paper
+package party.morino.prometheusexporter.paper
 
 import org.junit.jupiter.api.extension.AfterAllCallback
 import org.junit.jupiter.api.extension.BeforeAllCallback
@@ -22,13 +22,13 @@ import org.mockbukkit.mockbukkit.ServerMock
  * テスト用の JUnit 5 拡張クラス
  * MockBukkit と Koin の初期化・クリーンアップを行う
  */
-class PluginNameTest :
+class MoripaPrometheusExporterTest :
     BeforeAllCallback,
     AfterAllCallback {
 
     companion object {
         lateinit var server: ServerMock
-        lateinit var plugin: PluginName
+        lateinit var plugin: MoripaPrometheusExporter
     }
 
     override fun beforeAll(context: ExtensionContext) {
@@ -46,7 +46,7 @@ class PluginNameTest :
         }
 
         // プラグインをロード
-        plugin = MockBukkit.load(PluginName::class.java)
+        plugin = MockBukkit.load(MoripaPrometheusExporter::class.java)
 
         // プラグインインスタンスを Koin に登録
         GlobalContext.get().declare(plugin)

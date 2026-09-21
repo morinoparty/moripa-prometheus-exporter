@@ -20,7 +20,7 @@ env:
   S3_UPLOAD_BUCKET: ${{ secrets.S3_UPLOAD_BUCKET }}
   S3_ENDPOINT: ${{ secrets.S3_ENDPOINT }}
   PREVIEW_BASE_URL: ${{ vars.PREVIEW_BASE_URL }}
-  PROJECT_NAME: PluginName
+  PROJECT_NAME: MoripaPrometheusExporter
 
 jobs:
   # 共通の前処理：コミットSHAを取得

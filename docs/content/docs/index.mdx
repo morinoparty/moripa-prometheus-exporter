@@ -1,19 +1,27 @@
 ---
 title: Introduction
-description: PluginName Documentation
+description: MoripaPrometheusExporter Documentation
+icon: Activity
 ---
 
-# PluginName
+# MoripaPrometheusExporter
 
-PluginName is a Minecraft plugin template.
+MoripaPrometheusExporter は、Minecraft サーバー (Paper) およびプロキシ (Velocity) の稼働状況を Prometheus 形式で公開するプラグインです。
+プレイヤー人数や TPS などのメトリクスを Prometheus で収集し、Grafana で可視化することを目的としています。
 
-## Features
+## 公開を予定しているメトリクス
 
-- Multi-module structure (common, paper, velocity, api)
-- Paper and Velocity support
-- Cloud command framework
-- Koin dependency injection
+- オンラインプレイヤー数 (Paper / Velocity)
+- サーバーの TPS / MSPT (Paper)
+- JVM のメモリ使用量などのランタイム情報
 
-## Getting Started
+## モジュール構成
 
-Documentation will be added here.
+- `common` - Paper/Velocity 共通コード
+- `paper` - Paper (Bukkit) プラグイン
+- `velocity` - Velocity プロキシプラグイン
+- `api` - 外部プラグイン向け公開 API
+
+## 使い方
+
+セットアップ手順や公開されるメトリクスの詳細は、実装にあわせて順次追記していきます。

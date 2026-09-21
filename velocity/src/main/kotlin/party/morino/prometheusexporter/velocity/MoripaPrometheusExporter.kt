@@ -7,7 +7,7 @@
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
-package party.morino.pluginname.velocity
+package party.morino.prometheusexporter.velocity
 
 import com.google.inject.Inject
 import com.velocitypowered.api.command.CommandSource
@@ -23,17 +23,18 @@ import org.koin.core.context.GlobalContext
 import org.koin.core.context.GlobalContext.getOrNull
 import org.koin.dsl.module
 import org.slf4j.Logger
-import party.morino.pluginname.common.PluginNameCommon
-import party.morino.pluginname.velocity.commands.ExampleCommand
+import party.morino.prometheusexporter.common.BuildConstants
+import party.morino.prometheusexporter.common.MoripaPrometheusExporterCommon
 
 @Plugin(
-    id = "pluginname",
-    name = "PluginName",
-    version = "1.0.0",
-    description = "A Minecraft plugin template",
+    id = "moripa-prometheus-exporter",
+    name = "MoripaPrometheusExporter",
+    // バージョンは Gradle が生成する BuildConstants から取得する (gradle.properties の version と連動)
+    version = BuildConstants.VERSION,
+    description = "Exports proxy metrics (player count, etc.) for Prometheus / Grafana",
     authors = ["morinoparty"],
 )
-class PluginName @Inject constructor(
+class MoripaPrometheusExporter @Inject constructor(
     private val server: ProxyServer,
     private val logger: Logger,
 ) {
@@ -42,7 +43,7 @@ class PluginName @Inject constructor(
     @Suppress("UnusedParameter")
     fun onProxyInitialization(event: ProxyInitializeEvent) {
         setupKoin()
-        PluginNameCommon.init()
+        MoripaPrometheusExporterCommon.init()
 
         val commandManager = VelocityCommandManager<CommandSource>(
             server.pluginManager.ensurePluginContainer(this),
@@ -51,15 +52,15 @@ class PluginName @Inject constructor(
             SenderMapper.identity(),
         )
 
-        ExampleCommand(commandManager).register()
+        // TODO: エクスポーター用のコマンド（設定リロードなど）はここで commandManager に登録する
 
-        logger.info("PluginName has been enabled!")
+        logger.info("MoripaPrometheusExporter has been enabled!")
     }
 
     @Subscribe
     @Suppress("UnusedParameter")
     fun onProxyShutdown(event: ProxyShutdownEvent) {
-        logger.info("PluginName has been disabled!")
+        logger.info("MoripaPrometheusExporter has been disabled!")
     }
 
     /**
@@ -72,7 +73,7 @@ class PluginName @Inject constructor(
 
         val appModule = module {
             single<ProxyServer> { server }
-            single<org.slf4j.Logger> { this@PluginName.logger }
+            single<org.slf4j.Logger> { this@MoripaPrometheusExporter.logger }
         }
 
         getOrNull() ?: GlobalContext.startKoin {

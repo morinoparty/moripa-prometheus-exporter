@@ -7,19 +7,19 @@
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
-package party.morino.pluginname.paper
+package party.morino.prometheusexporter.paper
 
 import com.github.shynixn.mccoroutine.bukkit.SuspendingJavaPlugin
 import org.koin.core.context.GlobalContext
 import org.koin.core.context.GlobalContext.getOrNull
 import org.koin.dsl.module
-import party.morino.pluginname.common.PluginNameCommon
+import party.morino.prometheusexporter.common.MoripaPrometheusExporterCommon
 
-open class PluginName : SuspendingJavaPlugin() {
+open class MoripaPrometheusExporter : SuspendingJavaPlugin() {
 
     override suspend fun onEnableAsync() {
         setupKoin()
-        PluginNameCommon.init()
+        MoripaPrometheusExporterCommon.init()
         logger.info("${pluginMeta.name} v${pluginMeta.version} has been enabled!")
     }
 
@@ -37,7 +37,7 @@ open class PluginName : SuspendingJavaPlugin() {
         }
 
         val appModule = module {
-            single<PluginName> { this@PluginName }
+            single<MoripaPrometheusExporter> { this@MoripaPrometheusExporter }
         }
 
         getOrNull() ?: GlobalContext.startKoin {

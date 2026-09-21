@@ -1,6 +1,7 @@
 {
     "pages": [
         "index",
-        "license-header"
+        "license-header",
+        "build-constants"
     ]
 }
