@@ -6,13 +6,24 @@ Paper / Velocity 両対応のマルチモジュール構成になっています
 
 📖 ドキュメント: https://prometheus-exporter.plugin.morino.party/
 
-## 公開を予定しているメトリクス
+## 公開されるメトリクス
 
-| メトリクス | 対象 |
-|-----------|------|
-| オンラインプレイヤー数 | Paper / Velocity |
-| TPS / MSPT | Paper |
-| JVM メモリ使用量などのランタイム情報 | Paper / Velocity |
+主要なメトリクスは以下のとおりです。完全な一覧は [Paper Metrics](https://prometheus-exporter.plugin.morino.party/docs/paper/metrics) / [Velocity Metrics](https://prometheus-exporter.plugin.morino.party/docs/velocity/metrics) を参照してください。
+
+| メトリクス | 型 | 対象 | 内容 |
+|-----------|-----|------|------|
+| `minecraft_players_online` | gauge | Paper | オンラインプレイヤー数 |
+| `minecraft_tps{period}` | gauge | Paper | TPS (直近 1 分 / 5 分 / 15 分) |
+| `minecraft_tick_duration_seconds` | histogram | Paper | ティック時間 (MSPT) の分布 |
+| `minecraft_world_entities{world}` など | gauge | Paper | ワールドごとのエンティティ数・チャンク数など |
+| `minecraft_player_joins_total` / `minecraft_player_quits_total{reason}` | counter | Paper | プレイヤーの参加・退出回数 |
+| `velocity_players_online` | gauge | Velocity | プロキシ全体のオンラインプレイヤー数 |
+| `velocity_backend_players{server}` | gauge | Velocity | バックエンドサーバーごとの接続人数 |
+| `velocity_logins_total` / `velocity_disconnects_total{status}` | counter | Velocity | ログイン・切断回数 |
+| `jvm_*` / `process_*` | – | Paper / Velocity | JVM メモリ使用量、GC、スレッド数などのランタイム情報 |
+
+メトリクスは `http://<host>:9225/metrics` (Paper) / `http://<host>:9226/metrics` (Velocity) で公開されます。
+導入手順や設定については[ドキュメント](https://prometheus-exporter.plugin.morino.party/docs/getting-started)を参照してください。
 
 ## モジュール構成
 
@@ -27,7 +38,7 @@ Paper / Velocity 両対応のマルチモジュール構成になっています
 
 - **Kotlin** - 言語
 - **Paper API** 26.2 - Minecraft サーバー API
-- **Velocity API** 4.1 - Minecraft プロキシ API
+- **Velocity API** 4.2 - Minecraft プロキシ API
 - **Cloud** - コマンドフレームワーク (Incendo)
 - **Koin** - 依存性注入
 - **MCCoroutine** - Kotlin Coroutines の Minecraft 統合

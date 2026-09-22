@@ -1,0 +1,5 @@
+{
+    "title": "リポジトリ",
+    "description": "開発者向けのリポジトリ運用に関するドキュメント",
+    "pages": ["license-header", "build-constants"]
+}

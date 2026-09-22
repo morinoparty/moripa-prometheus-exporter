@@ -1,0 +1,116 @@
+---
+title: Velocity Metrics
+description: Velocity プラグインが公開するメトリクスの一覧と PromQL の例
+---
+
+# Velocity Metrics
+
+このページでは、Velocity プラグインが公開する `velocity_` プレフィックスのメトリクスを一覧にまとめています。
+JVM / プロセス系のメトリクス (`jvm_*`, `process_*`) については [Metrics Overview](/docs/metrics) を参照してください。
+
+「取得元」の列は、値を読み取っている Velocity API を示しています。
+ゲージ型のメトリクスはスクレイプの時点で読み取られ、カウンター型のメトリクスはイベントが発生した時点で更新されます。
+収集の仕組みについては [Velocity](/docs/velocity) のページを参照してください。
+
+## 実装済みのメトリクス
+
+### プレイヤーとバックエンドサーバー
+
+| メトリクス名 | 型 | ラベル | 取得元 | 状態 |
+|-------------|-----|--------|--------|------|
+| `velocity_players_online` | gauge | – | `ProxyServer#getPlayerCount` | 実装済み |
+| `velocity_show_max_players` | gauge | – | `ProxyConfig#getShowMaxPlayers` | 実装済み |
+| `velocity_backend_players` | gauge | `server` | `RegisteredServer#getPlayersConnected` | 実装済み |
+| `velocity_backend_servers` | gauge | – | `ProxyServer#getAllServers` | 実装済み |
+
+`velocity_show_max_players` は `velocity.toml` の `show-max-players` の値であり、サーバーリストに表示される人数です。実際の接続上限ではありません。
+`velocity_backend_players` の `server` ラベルには、`velocity.toml` の `[servers]` に登録されたサーバー名が入ります。
+
+### プロキシ情報
+
+| メトリクス名 | 型 | ラベル | 取得元 | 状態 |
+|-------------|-----|--------|--------|------|
+| `velocity_proxy_info` | info | `name`, `vendor`, `version` | `ProxyServer#getVersion` | 実装済み |
+| `velocity_plugins_loaded` | gauge | – | `PluginManager#getPlugins` | 実装済み |
+
+### 接続イベント
+
+| メトリクス名 | 型 | ラベル | 取得元 | 状態 |
+|-------------|-----|--------|--------|------|
+| `velocity_logins_total` | counter | – | `PostLoginEvent` | 実装済み |
+| `velocity_disconnects_total` | counter | `status` | `DisconnectEvent#getLoginStatus` | 実装済み |
+| `velocity_server_connections_total` | counter | `server`, `previous_server` | `ServerConnectedEvent` | 実装済み |
+| `velocity_server_kicks_total` | counter | `server`, `phase` | `KickedFromServerEvent` | 実装済み |
+| `velocity_pings_total` | counter | – | `ProxyPingEvent` (STATUS のみ) | 実装済み |
+
+各ラベルの値は次のとおりです。
+
+| ラベル | 値 |
+|--------|-----|
+| `status` | `DisconnectEvent.LoginStatus` を小文字にした値です。`successful_login` (通常の切断)、`conflicting_login`、`cancelled_by_user`、`cancelled_by_proxy`、`cancelled_by_user_before_complete`、`pre_server_join` があります。 |
+| `previous_server` | 移動元のサーバー名です。プロキシ接続直後の初回接続では `none` になります。 |
+| `phase` | キックされたタイミングです。バックエンドへの接続処理中 (ログイン処理中を含む) のキックは `connect`、接続完了後のプレイ中のキックは `play` です。Velocity API では接続中とログイン中を区別できないため、`login` という値はありません。 |
+
+`velocity_logins_total` は、ログインが完了したプレイヤーだけを数えます。他のプラグインによって拒否されたログイン試行は含まれず、これらは検討中の `velocity_login_attempts_total{result}` で扱う予定です。
+
+`velocity_pings_total` は、サーバーリスト表示のためのステータス問い合わせのみを数えます。
+
+## 検討中のメトリクス
+
+以下は、今後の追加候補として検討しているメトリクスです。
+ラベルのカーディナリティや収集コスト、バックエンドへの追加のネットワーク負荷といった観点から、初期リリースでは見送っています。
+現時点では公開されないため、ダッシュボードの設計時には注意してください。
+
+| メトリクス名 | 型 | ラベル | 取得元 | 状態 | 備考 |
+|-------------|-----|--------|--------|------|------|
+| `velocity_backend_up` | gauge | `server` | `RegisteredServer#ping` | 検討中 | バックエンドへ定期的に ping を送る必要があり、スケジューラー駆動のオプトイン機能として設計を検討中です。 |
+| `velocity_backend_ping_duration_seconds` | gauge | `server` | `RegisteredServer#ping` | 検討中 | 上記と同じく、定期的な ping のオプトイン機能に含める予定です。 |
+| `velocity_backend_ping_players_online` | gauge | `server` | `RegisteredServer#ping` | 検討中 | 上記と同じく、定期的な ping のオプトイン機能に含める予定です。 |
+| `velocity_player_ping_seconds` | histogram | – | `Player#getPing` | 検討中 | 全プレイヤーを走査するコストと、ヒストグラムの有用性を評価中です。 |
+| `velocity_player_protocols` | gauge | `protocol_version` | `Player#getProtocolVersion` | 検討中 | プロトコルバージョンの種類だけ系列数が増えるため、需要を見て判断します。 |
+| `velocity_player_clients` | gauge | `brand` | `Player#getClientBrand` | 検討中 | クライアント名は任意の文字列を取り得るため、カーディナリティの制御が必要です。 |
+| `velocity_login_attempts_total` | counter | `result` | `PreLoginEvent` など | 検討中 | 結果の分類方法 (ラベル設計) を検討中です。 |
+| `velocity_handshakes_total` | counter | `intent` | `ConnectionHandshakeEvent` | 検討中 | 需要を見て追加を判断します。 |
+| `velocity_session_duration_seconds` | histogram | – | `LoginEvent` / `DisconnectEvent` | 検討中 | プレイヤーごとの接続時刻を保持する必要があり、実装方式を検討中です。 |
+| `velocity_plugin_info` | info | `id`, `name`, `version` | `PluginManager#getPlugins` | 検討中 | プラグイン数に応じて系列数が増えるため、需要を見て判断します。 |
+| `velocity_configured_servers` | gauge | – | `ProxyConfig#getServers` | 検討中 | `velocity_backend_servers` との違いが小さいため、優先度を下げています。 |
+| `velocity_proxy_shutting_down` | gauge | – | `ProxyShutdownEvent` | 検討中 | シャットダウン中はスクレイプできない可能性が高く、有用性を評価中です。 |
+
+## PromQL の例
+
+Grafana のパネルでそのまま使える PromQL の例を挙げます。
+
+### プレイヤー数
+
+```text
+# プロキシ全体のオンラインプレイヤー数
+velocity_players_online
+
+# 全バックエンドの合計プレイヤー数
+sum(velocity_backend_players)
+
+# バックエンドサーバーごとのプレイヤー数
+velocity_backend_players
+
+# 特定のバックエンドのプレイヤー数
+velocity_backend_players{server="lobby"}
+```
+
+### 接続の傾向
+
+```text
+# 直近 1 時間のログイン回数
+increase(velocity_logins_total[1h])
+
+# ログイン状態別の切断レート
+sum by (status) (rate(velocity_disconnects_total[5m]))
+
+# サーバー間移動のレート (初回接続を除く)
+sum by (server) (rate(velocity_server_connections_total{previous_server!="none"}[5m]))
+
+# バックエンドごとのキック回数 (直近 1 時間)
+sum by (server, phase) (increase(velocity_server_kicks_total[1h]))
+
+# サーバーリストの ping レート
+rate(velocity_pings_total[5m])
+```

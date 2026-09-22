@@ -1,0 +1,150 @@
+---
+title: Paper Metrics
+description: Paper プラグインが公開するメトリクスの一覧と PromQL の例
+---
+
+# Paper Metrics
+
+このページでは、Paper プラグインが公開する `minecraft_` プレフィックスのメトリクスを一覧にまとめています。
+JVM / プロセス系のメトリクス (`jvm_*`, `process_*`) については [Metrics Overview](/docs/metrics) を参照してください。
+
+「取得元」の列は、値を読み取っている Paper API を示しています。
+サンプリング型のメトリクスは `samplingIntervalTicks` ごとに更新され、イベント由来のメトリクスはイベントが発生した時点で更新されます。
+収集の仕組みについては [Paper](/docs/paper) のページを参照してください。
+
+## 実装済みのメトリクス
+
+### プレイヤー
+
+| メトリクス名 | 型 | ラベル | 取得元 | 状態 |
+|-------------|-----|--------|--------|------|
+| `minecraft_players_online` | gauge | – | `Server#getOnlinePlayers().size` | 実装済み |
+| `minecraft_players_max` | gauge | – | `Server#getMaxPlayers` | 実装済み |
+| `minecraft_player_joins_total` | counter | – | `PlayerJoinEvent` | 実装済み |
+| `minecraft_player_quits_total` | counter | `reason` | `PlayerQuitEvent#getReason` | 実装済み |
+
+`reason` ラベルには `disconnected`, `kicked`, `timed_out`, `erroneous_state` のように、Paper の `PlayerQuitEvent.QuitReason` を小文字にした値が入ります。
+
+### ティック / TPS
+
+| メトリクス名 | 型 | ラベル | 取得元 | 状態 |
+|-------------|-----|--------|--------|------|
+| `minecraft_tps` | gauge | `period` (1m / 5m / 15m) | `Server#getTPS` | 実装済み |
+| `minecraft_tick_duration_average_seconds` | gauge | – | `Server#getAverageTickTime` (ミリ秒を秒に変換) | 実装済み |
+| `minecraft_tick_duration_seconds` | histogram | – | `ServerTickEndEvent#getTickDuration` | 実装済み |
+| `minecraft_ticks_total` | counter | – | `ServerTickEndEvent` | 実装済み |
+| `minecraft_tick_rate_target` | gauge | – | `ServerTickManager#getTickRate` | 実装済み |
+| `minecraft_tick_frozen` | gauge | – | `ServerTickManager#isFrozen` | 実装済み |
+| `minecraft_tick_sprinting` | gauge | – | `ServerTickManager#isSprinting` | 実装済み |
+
+`minecraft_tick_duration_seconds` はヒストグラムのため、実際には `_bucket`、`_sum`、`_count` の 3 つの系列として公開されます。
+バケット境界は `0.005, 0.01, 0.025, 0.05, 0.075, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0` 秒です。
+
+### ワールド
+
+`world` ラベルの値は `minecraft:overworld` のような名前空間付きのワールドキーです。
+
+| メトリクス名 | 型 | ラベル | 取得元 | 状態 |
+|-------------|-----|--------|--------|------|
+| `minecraft_world_entities` | gauge | `world` | `World#getEntityCount` | 実装済み |
+| `minecraft_world_chunks_loaded` | gauge | `world` | `World#getChunkCount` | 実装済み |
+| `minecraft_world_players` | gauge | `world` | `World#getPlayerCount` | 実装済み |
+| `minecraft_world_block_entities` | gauge | `world` | `World#getTileEntityCount` | 実装済み |
+| `minecraft_world_tickable_block_entities` | gauge | `world` | `World#getTickableTileEntityCount` | 実装済み |
+| `minecraft_world_time_ticks` | gauge | `world` | `World#getTime` | 実装済み |
+| `minecraft_world_game_time_ticks` | gauge | `world` | `World#getGameTime` | 実装済み |
+| `minecraft_world_storm` | gauge | `world` | `World#hasStorm` | 実装済み |
+| `minecraft_world_thundering` | gauge | `world` | `World#isThundering` | 実装済み |
+| `minecraft_chunk_loads_total` | counter | `world`, `new` | `ChunkLoadEvent` | 実装済み |
+| `minecraft_chunk_unloads_total` | counter | `world` | `ChunkUnloadEvent` | 実装済み |
+
+`minecraft_world_time_ticks` はワールド内の時刻 (1 日 = 24000 ティック) を、`minecraft_world_game_time_ticks` はワールド作成からの累計ティック数を表します。
+`minecraft_chunk_loads_total` の `new` ラベルは、そのチャンクが新規に生成されたものであれば `true`、ディスクから読み込まれたものであれば `false` になります。
+
+### サーバー情報
+
+| メトリクス名 | 型 | ラベル | 取得元 | 状態 |
+|-------------|-----|--------|--------|------|
+| `minecraft_server_info` | info | `version`, `bukkit_version`, `minecraft_version` | `Server#getVersion`, `Server#getBukkitVersion`, `Server#getMinecraftVersion` | 実装済み |
+| `minecraft_plugins_loaded` | gauge | – | `PluginManager#getPlugins` | 実装済み |
+| `minecraft_plugins_enabled` | gauge | – | `Plugin#isEnabled` | 実装済み |
+
+## 検討中のメトリクス
+
+以下は、今後の追加候補として検討しているメトリクスです。
+ラベルのカーディナリティ (系列数の増加) や収集コストの観点から、初期リリースでは見送っています。
+現時点では公開されないため、ダッシュボードの設計時には注意してください。
+
+| メトリクス名 | 型 | ラベル | 取得元 | 状態 | 備考 |
+|-------------|-----|--------|--------|------|------|
+| `minecraft_player_deaths_total` | counter | `world`, `cause` | `PlayerDeathEvent` | 検討中 | 死因の種類が多く系列数が増えるため、ラベルの粒度を検討中です。 |
+| `minecraft_entity_spawns_total` | counter | `world`, `reason` | `CreatureSpawnEvent` | 検討中 | 極めて高頻度に発生するイベントのため、ハンドラーのコストを評価する必要があります。 |
+| `minecraft_server_list_pings_total` | counter | – | `PaperServerListPingEvent` | 検討中 | 需要を見て追加を判断します。 |
+| `minecraft_server_exceptions_total` | counter | – | `ServerExceptionEvent` | 検討中 | 例外の分類方法 (ラベル設計) を検討中です。 |
+| `minecraft_chat_messages_total` | counter | – | `AsyncChatEvent` | 検討中 | 需要を見て追加を判断します。 |
+| `minecraft_commands_total` | counter | – | `PlayerCommandPreprocessEvent` など | 検討中 | コマンド名をラベルにするとカーディナリティが高くなるため、集計単位を検討中です。 |
+| `minecraft_player_ping_seconds` | histogram | – | `Player#getPing` | 検討中 | 全プレイヤーを走査するサンプリングコストと、ヒストグラムの有用性を評価中です。 |
+| `minecraft_player_clients` | gauge | `brand` | `Player#getClientBrandName` | 検討中 | クライアント名は任意の文字列を取り得るため、カーディナリティの制御が必要です。 |
+| `minecraft_player_locales` | gauge | `locale` | `Player#locale` | 検討中 | ロケールの種類が多く、系列数が増える可能性があります。 |
+| `minecraft_world_entity_types` | gauge | `world`, `type` | `World#getEntitiesByClass` など | 検討中 | エンティティ種別が 100 以上あり、ワールド数との積で系列数が急増するため見送っています。 |
+| `minecraft_world_size_bytes` | gauge | `world` | ワールドディレクトリのサイズ | 検討中 | ディスク走査のコストが高く、メインスレッドでは実行できないため別の収集方式が必要です。 |
+| `minecraft_players_registered` | gauge | – | `Server#getOfflinePlayers` | 検討中 | プレイヤーデータの走査コストが高いため、キャッシュ方式を検討中です。 |
+| `minecraft_whitelist_enabled` | gauge | – | `Server#hasWhitelist` | 検討中 | 変化が少ない設定値のため、優先度を下げています。 |
+| `minecraft_view_distance_chunks` | gauge | – | `Server#getViewDistance` | 検討中 | 変化が少ない設定値のため、優先度を下げています。 |
+| `minecraft_simulation_distance_chunks` | gauge | – | `Server#getSimulationDistance` | 検討中 | 変化が少ない設定値のため、優先度を下げています。 |
+| `minecraft_plugin_info` | info | `name`, `version` | `PluginManager#getPlugins` | 検討中 | プラグイン数に応じて系列数が増えるため、需要を見て判断します。 |
+| `minecraft_world_info` | info | `world`, `environment` | `World#getEnvironment` | 検討中 | ワールドの属性をラベルで結合できるようにする案として検討中です。 |
+
+## PromQL の例
+
+Grafana のパネルでそのまま使える PromQL の例を挙げます。
+複数のサーバーを収集している場合は、`instance` や `job` ラベルで絞り込んでください。
+
+### TPS とティック時間
+
+```text
+# 直近 1 分間の TPS
+minecraft_tps{period="1m"}
+
+# ティック時間の 99 パーセンタイル (直近 5 分)
+histogram_quantile(0.99, sum(rate(minecraft_tick_duration_seconds_bucket[5m])) by (le))
+
+# 50 ms を超えたティック (ラグ) の割合
+1 - (
+  sum(rate(minecraft_tick_duration_seconds_bucket{le="0.05"}[5m]))
+  /
+  sum(rate(minecraft_tick_duration_seconds_count[5m]))
+)
+
+# 実効的なティックレート (ticks/s)
+rate(minecraft_ticks_total[1m])
+```
+
+### プレイヤー
+
+```text
+# オンラインプレイヤー数と最大人数の比率
+minecraft_players_online / minecraft_players_max
+
+# 直近 1 時間の参加回数
+increase(minecraft_player_joins_total[1h])
+
+# 理由別の退出レート
+sum by (reason) (rate(minecraft_player_quits_total[5m]))
+```
+
+### ワールド
+
+```text
+# ワールドごとのエンティティ数
+minecraft_world_entities
+
+# 全ワールド合計のロード済みチャンク数
+sum(minecraft_world_chunks_loaded)
+
+# 新規生成チャンクのレート (ワールド別)
+sum by (world) (rate(minecraft_chunk_loads_total{new="true"}[5m]))
+
+# 雷雨が発生しているワールド
+minecraft_world_thundering == 1
+```

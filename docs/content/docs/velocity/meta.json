@@ -1,0 +1,5 @@
+{
+    "title": "Velocity",
+    "description": "Velocity プロキシ向けプラグインの導入と公開されるメトリクス",
+    "pages": ["index", "metrics"]
+}

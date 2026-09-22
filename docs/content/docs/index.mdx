@@ -9,11 +9,21 @@ icon: Activity
 MoripaPrometheusExporter は、Minecraft サーバー (Paper) およびプロキシ (Velocity) の稼働状況を Prometheus 形式で公開するプラグインです。
 プレイヤー人数や TPS などのメトリクスを Prometheus で収集し、Grafana で可視化することを目的としています。
 
-## 公開を予定しているメトリクス
+プラグインを導入すると、サーバーやプロキシの JVM 内で軽量な HTTP サーバーが起動し、`/metrics` エンドポイントから Prometheus のテキスト形式でメトリクスを公開します。
+Prometheus 側は通常の `scrape_configs` でこのエンドポイントを定期的にスクレイプするだけで、追加のエージェントや中継サーバーは必要ありません。
 
-- オンラインプレイヤー数 (Paper / Velocity)
-- サーバーの TPS / MSPT (Paper)
-- JVM のメモリ使用量などのランタイム情報
+## 公開されるメトリクス
+
+公開されるメトリクスは、稼働するプラットフォームごとにプレフィックスで区別されています。
+
+| プレフィックス | 対象 | 主な内容 |
+|---------------|------|---------|
+| `minecraft_` | Paper | オンラインプレイヤー数、TPS / ティック時間、ワールドごとのエンティティ数やチャンク数、プレイヤーの参加・退出回数など |
+| `velocity_` | Velocity | プロキシ全体のプレイヤー数、バックエンドサーバーごとの接続人数、ログイン・切断・サーバー間移動の回数など |
+| `jvm_` / `process_` | Paper / Velocity 共通 | JVM のメモリ使用量、GC、スレッド数、プロセスの CPU 時間など |
+
+命名規則や JVM メトリクスの一覧、スレッド安全性の設計については [Metrics Overview](/docs/metrics) を参照してください。
+各プラットフォームで公開されるメトリクスの完全な一覧は、[Paper Metrics](/docs/paper/metrics) および [Velocity Metrics](/docs/velocity/metrics) にまとめています。
 
 ## モジュール構成
 
@@ -24,4 +34,9 @@ MoripaPrometheusExporter は、Minecraft サーバー (Paper) およびプロキ
 
 ## 使い方
 
-セットアップ手順や公開されるメトリクスの詳細は、実装にあわせて順次追記していきます。
+はじめて導入する場合は、JAR の配置から Prometheus の設定までを一通り説明している [Getting Started](/docs/getting-started) から読み進めてください。
+
+プラットフォームごとの詳細は、以下のページにまとめています。
+
+- [Paper](/docs/paper) - Paper サーバーへの導入、設定ファイル、サンプリングの仕組み
+- [Velocity](/docs/velocity) - Velocity プロキシへの導入、設定ファイル、イベント駆動のカウンター

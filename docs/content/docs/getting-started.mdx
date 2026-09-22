@@ -1,0 +1,128 @@
+---
+title: Getting Started
+description: JAR の配置から Prometheus のスクレイプ設定、Grafana での可視化までの導入手順
+icon: Rocket
+---
+
+# Getting Started
+
+このページでは、MoripaPrometheusExporter を Paper サーバーまたは Velocity プロキシに導入し、Prometheus からメトリクスを収集できるようにするまでの手順を説明します。
+
+## 1. JAR のダウンロードと配置
+
+プラグインの JAR は [GitHub Releases](https://github.com/morinoparty/moripa-prometheus-exporter/releases) から入手できます。
+Paper 用と Velocity 用で JAR が分かれているため、導入先に合わせて正しい方をダウンロードしてください。
+
+| 導入先 | JAR | 配置先 |
+|--------|-----|--------|
+| Paper サーバー | `paper` モジュールの JAR | サーバーの `plugins/` ディレクトリ |
+| Velocity プロキシ | `velocity` モジュールの JAR | プロキシの `plugins/` ディレクトリ |
+
+JAR を配置したらサーバーまたはプロキシを再起動します。
+初回起動時に設定ファイルがデフォルト値で生成され、メトリクス用の HTTP サーバーが起動します。
+起動ログには実際に公開している URL が出力されるので、そこでポートを確認できます。
+
+ソースからビルドする場合は、リポジトリのルートで `./gradlew build` を実行すると `paper/build/libs/` と `velocity/build/libs/` に JAR が生成されます。
+
+<Callout type="info">
+Velocity 版の JAR には Kotlin の標準ライブラリが同梱されていないため、プロキシ側で Kotlin ランタイムを別途用意する必要があります。
+必要なライブラリは [Velocity](/docs/velocity) のページに記載していますが、検証済みの提供手順は未整備です。
+</Callout>
+
+## 2. 設定ファイル (config.json)
+
+設定ファイルはプラグインのデータディレクトリに `config.json` として生成されます。
+
+| プラットフォーム | 設定ファイルのパス |
+|-----------------|-------------------|
+| Paper | `plugins/MoripaPrometheusExporter/config.json` |
+| Velocity | `plugins/moripa-prometheus-exporter/config.json` |
+
+Paper でのデフォルト値は以下のとおりです。
+
+```json
+{
+    "server": {
+        "host": "0.0.0.0",
+        "port": 9225,
+        "path": "/metrics"
+    },
+    "metrics": {
+        "jvm": true,
+        "samplingIntervalTicks": 20
+    }
+}
+```
+
+Velocity では、Paper と同じホストで動かしてもポートが衝突しないように、`server.port` のデフォルト値だけが `9226` になっています。
+それ以外のキーとデフォルト値は Paper と共通です。
+
+各キーの意味は次のとおりです。
+
+| キー | デフォルト | 説明 |
+|------|-----------|------|
+| `server.host` | `"0.0.0.0"` | HTTP サーバーが待ち受けるアドレスです。Prometheus と同じホストで動かす場合や、リバースプロキシ経由で公開する場合は `"127.0.0.1"` に絞ることを推奨します。 |
+| `server.port` | `9225` (Paper) / `9226` (Velocity) | HTTP サーバーが待ち受けるポートです。`0` を指定すると空いているポートが自動的に割り当てられ、実際のポートは起動ログに出力されます。 |
+| `server.path` | `"/metrics"` | メトリクスを公開する HTTP パスです。Prometheus 側の `metrics_path` と一致させてください。 |
+| `metrics.jvm` | `true` | JVM / プロセスのメトリクス (`jvm_*`, `process_*`) を公開するかどうかです。 |
+| `metrics.samplingIntervalTicks` | `20` | Paper でメインスレッド上のサンプリングを行う間隔をティック数で指定します。`20` ティックは約 1 秒に相当します。`1` 以上の値を指定する必要があり、`0` 以下を指定すると設定の読み込みに失敗します。Velocity にはティックの概念がないため、この値は使用されません (ただし値の検証は Velocity でも行われます)。 |
+
+設定ファイルに存在しないキーはデフォルト値で補われ、未知のキーは無視されます。
+設定を変更した場合は、サーバーまたはプロキシを再起動して反映してください。
+
+指定したポートが既に使用されている場合、起動ログにメトリクス用 HTTP サーバーのバインドに失敗した旨のエラーが出力されます。
+この場合もプラグイン自体は無効化されないため、ポートを変更して再起動してください。
+
+## 3. Prometheus のスクレイプ設定
+
+Prometheus の `prometheus.yml` に、Paper と Velocity それぞれのジョブを追加します。
+以下は Paper サーバーとプロキシが同じホストで動作している場合の例です。
+
+```yaml
+scrape_configs:
+  # Paper サーバー
+  - job_name: "minecraft-paper"
+    metrics_path: "/metrics"
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["127.0.0.1:9225"]
+        labels:
+          instance: "survival"
+
+  # Velocity プロキシ
+  - job_name: "minecraft-velocity"
+    metrics_path: "/metrics"
+    scrape_interval: 15s
+    static_configs:
+      - targets: ["127.0.0.1:9226"]
+        labels:
+          instance: "proxy"
+```
+
+複数の Paper サーバーを運用している場合は、`targets` にサーバーごとのエンドポイントを並べ、`instance` ラベルなどでサーバーを区別してください。
+設定を反映したら、Prometheus の Web UI にある Status → Targets からターゲットが `UP` になっていることを確認します。
+
+### ヘルスチェック
+
+メトリクス用の HTTP サーバーは、`/metrics` に加えて `/-/healthy` エンドポイントも提供しています。
+このエンドポイントは HTTP サーバーが応答できる状態であれば `200 OK` を返すため、監視ツールやコンテナの liveness probe から死活確認に利用できます。
+
+```bash
+curl -s -o /dev/null -w "%{http_code}\n" http://127.0.0.1:9225/-/healthy
+```
+
+## 4. Grafana での可視化
+
+Prometheus をデータソースとして Grafana に登録すると、収集したメトリクスをダッシュボードで可視化できます。
+最初の一歩として使いやすい PromQL の例をいくつか挙げます。
+
+| 目的 | PromQL |
+|------|--------|
+| Paper サーバーの直近 1 分間の TPS | `minecraft_tps{period="1m"}` |
+| Paper サーバーのオンラインプレイヤー数 | `minecraft_players_online` |
+| プロキシ配下の全バックエンドの合計プレイヤー数 | `sum(velocity_backend_players)` |
+| バックエンドサーバーごとのプレイヤー数 | `velocity_backend_players` |
+| ティック時間の 99 パーセンタイル (直近 5 分) | `histogram_quantile(0.99, sum(rate(minecraft_tick_duration_seconds_bucket[5m])) by (le))` |
+| JVM ヒープ使用量 | `sum(jvm_memory_used_bytes{area="heap"})` |
+
+より多くの例は [Paper Metrics](/docs/paper/metrics) と [Velocity Metrics](/docs/velocity/metrics) の PromQL の例の節に掲載しています。

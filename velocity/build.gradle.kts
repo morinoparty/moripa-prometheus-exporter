@@ -35,9 +35,15 @@ dependencies {
 
     // JARにバンドル
     implementation(libs.koin.core)
+    // Prometheus クライアント (レジストリ / HTTP エクスポーター / JVM メトリクス)
+    implementation(libs.bundles.prometheus)
 
     // テスト依存関係
     testImplementation(libs.bundles.junit.jupiter)
+    // compileOnly はテストのクラスパスに乗らないため、テストでは Velocity API を明示的に追加する
+    testImplementation(libs.velocity.api)
+    // スクレイプ結果をテキスト形式で検証するために使う
+    testImplementation(libs.prometheus.textformats)
     testImplementation(libs.bundles.koin.test)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.serialization.json)
@@ -51,6 +57,10 @@ tasks {
         dependsOn("shadowJar")
     }
     shadowJar {
+        // 他プラグインが同梱する Prometheus クライアントとクラスが衝突しないようにパッケージを移動する
+        relocate("io.prometheus.metrics", "party.morino.prometheusexporter.libs.io.prometheus.metrics")
+        // 依存ライブラリのライセンスファイルが JAR 直下で重複しないよう除外する
+        exclude("META-INF/LICENSE", "META-INF/NOTICE")
         dependencies {
             exclude(dependency("org.jetbrains.kotlin:.*:.*"))
             exclude(dependency("org.jetbrains.kotlinx:kotlinx-coroutines-core:.*"))

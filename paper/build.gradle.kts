@@ -31,6 +31,8 @@ dependencies {
 
     // JARにバンドル
     implementation(libs.koin.core)
+    // Prometheus クライアント (レジストリ / HTTP エクスポーター / JVM メトリクス)
+    implementation(libs.bundles.prometheus)
 
     // テスト依存関係
     testImplementation(libs.paper.api)
@@ -38,13 +40,20 @@ dependencies {
     testImplementation(libs.bundles.koin.test)
     testImplementation(libs.mockk)
     testImplementation(libs.mock.bukkit)
+    // スクレイプ結果をテキスト形式で検証するために使う
+    testImplementation(libs.prometheus.textformats)
 }
 
 tasks {
     build {
         dependsOn("shadowJar")
     }
-    shadowJar
+    shadowJar {
+        // 他プラグインが同梱する Prometheus クライアントとクラスが衝突しないようにパッケージを移動する
+        relocate("io.prometheus.metrics", "party.morino.prometheusexporter.libs.io.prometheus.metrics")
+        // 依存ライブラリのライセンスファイルが JAR 直下で重複しないよう除外する
+        exclude("META-INF/LICENSE", "META-INF/NOTICE")
+    }
     test {
         useJUnitPlatform()
         testLogging {
