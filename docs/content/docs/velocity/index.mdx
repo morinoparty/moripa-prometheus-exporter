@@ -1,0 +1,84 @@
+---
+title: Velocity
+description: Velocity プロキシへの導入、設定ファイル、メトリクス収集の仕組み
+---
+
+# Velocity
+
+このページでは、MoripaPrometheusExporter を Velocity プロキシに導入する手順と、Velocity 固有のメトリクス収集の仕組みについて説明します。
+公開されるメトリクスの一覧は [Velocity Metrics](/docs/velocity/metrics) を参照してください。
+
+## 導入
+
+Velocity 用の JAR を [GitHub Releases](https://github.com/morinoparty/moripa-prometheus-exporter/releases) からダウンロードし、プロキシの `plugins/` ディレクトリに配置してからプロキシを起動します。
+
+起動に成功すると、メトリクスの公開 URL が起動ログに出力されるので、そこでホストとポートを確認できます。
+
+### Kotlin ランタイムの要件
+
+<Callout type="warn">
+Velocity 用の JAR には Kotlin の標準ライブラリ、kotlinx-coroutines、kotlinx-serialization が同梱されていません。
+これらのライブラリを提供する Kotlin ランタイムをプロキシ側に別途用意する必要があります。
+</Callout>
+
+Velocity 用のビルド (`velocity/build.gradle.kts` の `shadowJar` 設定) では、`org.jetbrains.kotlin` および `org.jetbrains.kotlinx` (coroutines, serialization) の依存関係を JAR から除外しています。
+そのため、これらのライブラリを何らかの方法でプロキシのクラスパスに提供しておく必要があります。
+このビルドで最低限必要なランタイムは kotlin-stdlib と kotlinx-serialization-json です (kotlinx-coroutines は JAR から除外されていますが、Velocity 版のコードでは使用していません)。
+検証済みの提供手順はまだ整備されておらず、現時点ではこのドキュメントに具体的な手順を掲載できていません。
+
+## 設定ファイル
+
+Velocity ではプラグインのデータディレクトリがプラグイン ID で命名されるため、設定ファイルは `plugins/moripa-prometheus-exporter/config.json` に生成されます。
+Paper のディレクトリ名 (`MoripaPrometheusExporter`) とは異なる点に注意してください。
+
+```json
+{
+    "server": {
+        "host": "0.0.0.0",
+        "port": 9226,
+        "path": "/metrics"
+    },
+    "metrics": {
+        "jvm": true,
+        "samplingIntervalTicks": 20
+    }
+}
+```
+
+Paper と同じホスト上でプロキシを動かすことが多いため、Paper のデフォルトである `9225` と衝突しないよう、Velocity のデフォルトポートは `9226` になっています。
+各キーの詳細は [Getting Started](/docs/getting-started) に掲載しています。
+
+`samplingIntervalTicks` は Paper 向けの設定で、Velocity には影響しません。
+設定ファイルの構造を両プラットフォームで共通にするために存在しています。
+
+## メトリクス収集の仕組み
+
+Velocity にはゲームのティックスレッドという概念がなく、プレイヤー数やバックエンドサーバーの情報はスレッドセーフなインメモリの構造から安価に読み取れます。
+そのため Paper のような定期的なサンプリングは行わず、ゲージ型のメトリクスはスクレイプの時点で `ProxyServer` から直接値を読み取ります。
+設計の背景は [Metrics Overview](/docs/metrics) のスレッド安全性の節を参照してください。
+
+### スクレイプ時に読み取るゲージ
+
+| コレクター | 収集する内容 |
+|-----------|-------------|
+| `ProxyPlayerMetricsCollector` | プロキシ全体のオンラインプレイヤー数、`show-max-players` の設定値、バックエンドサーバーごとの接続人数、登録済みバックエンドサーバー数、ロード済みプラグイン数 |
+| `ProxyInfoCollector` | Velocity の名前、ベンダー、バージョン |
+
+`velocity_show_max_players` は `velocity.toml` の `show-max-players` の値をそのまま公開しています。
+これはサーバーリストに表示される人数であり、実際の接続上限ではない点に注意してください。
+
+### イベント駆動のカウンター
+
+ログインや切断、サーバー間の移動などの発生回数は、Velocity のイベントリスナー (`ConnectionEventListener`) でカウンターをインクリメントする方式で収集しています。
+これらのハンドラーはイベントから必要最小限の情報を読み取ってカウンターを更新するだけの軽量な処理なので、Velocity のイベントシステム上で同期的に実行されます。
+
+| 対象イベント | 収集する内容 |
+|-------------|-------------|
+| `PostLoginEvent` | プロキシへのログイン完了回数 (拒否されたログイン試行は含みません) |
+| `DisconnectEvent` | ログイン状態別の切断回数 |
+| `ServerConnectedEvent` | 接続先と移動元のサーバー別の接続回数 |
+| `KickedFromServerEvent` | サーバーとフェーズ別の、バックエンドからのキック回数 |
+| `ProxyPingEvent` | サーバーリスト表示のための ping 回数 |
+
+`ServerConnectedEvent` の `previous_server` ラベルは、プレイヤーが別のサーバーから移動してきた場合にその移動元のサーバー名を持ち、プロキシに接続した直後の初回接続では `none` になります。
+これにより、初回接続とサーバー間移動を区別して集計できます。

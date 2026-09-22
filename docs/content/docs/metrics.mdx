@@ -1,0 +1,80 @@
+---
+title: Metrics Overview
+description: メトリクスの命名規則、共通で公開される JVM メトリクス、スレッド安全性の設計
+icon: ChartColumn
+---
+
+# Metrics Overview
+
+このページでは、MoripaPrometheusExporter が公開するメトリクスに共通する命名規則と、Paper / Velocity の両方で公開される JVM / プロセス系のメトリクス、そしてメトリクス収集がサーバーの処理を妨げないようにするための設計について説明します。
+
+プラットフォーム固有のメトリクスの一覧は、それぞれ以下のページを参照してください。
+
+- [Paper Metrics](/docs/paper/metrics) - `minecraft_` プレフィックスのメトリクス
+- [Velocity Metrics](/docs/velocity/metrics) - `velocity_` プレフィックスのメトリクス
+
+## 命名規則
+
+メトリクス名は Prometheus の[命名規約](https://prometheus.io/docs/practices/naming/)に従っています。
+
+| 規則 | 説明 | 例 |
+|------|------|-----|
+| プレフィックス | プラットフォームごとに `minecraft_` (Paper) または `velocity_` (Velocity) を先頭に付けます。JVM 系は client_java の標準どおり `jvm_` / `process_` です。 | `minecraft_players_online`, `velocity_players_online` |
+| snake_case | 単語はアンダースコアで区切り、すべて小文字で表記します。 | `minecraft_tick_duration_average_seconds` |
+| 基本単位 | 時間は秒、メモリはバイトなど、Prometheus の基本単位に統一し、単位を末尾に付けます。ミリ秒単位の値はエクスポート時に秒へ変換しています。 | `minecraft_tick_duration_seconds`, `jvm_memory_used_bytes` |
+| `_total` | 単調増加するカウンターには `_total` を付けます。 | `minecraft_player_joins_total`, `velocity_logins_total` |
+| `_info` | バージョンなどの文字列情報は、値が常に `1` で情報をラベルに持つ Info 型として `_info` を付けます。 | `minecraft_server_info`, `velocity_proxy_info` |
+| ティック数 | Minecraft 固有の単位であるティックは `_ticks` を付けて表します。 | `minecraft_world_time_ticks` |
+
+真偽値を表すゲージ (`minecraft_tick_frozen` や `minecraft_world_storm` など) は、真のとき `1`、偽のとき `0` を取ります。
+
+ラベルの値については、ワールドを表す `world` ラベルにワールド名ではなく `minecraft:overworld` のような名前空間付きキーを使用するなど、将来にわたって安定した識別子を採用しています。
+
+## JVM / プロセスのメトリクス
+
+`metrics.jvm` が `true` (デフォルト) の場合、Prometheus client_java が提供する標準的な JVM / プロセスのメトリクスが Paper / Velocity の両方で公開されます。
+これらは Grafana の一般的な JVM ダッシュボードと互換性があります。
+ただし、`jvm_memory_pool_allocated_bytes_total` は公開されません。このメトリクスは解除できない JMX の GC 通知リスナーを登録するため、プラグインの再有効化のたびに古いレジストリが保持され続けるのを避ける目的で、意図的に登録していません。
+
+| メトリクスファミリー | 型 | 主なラベル | 内容 |
+|---------------------|-----|-----------|------|
+| `jvm_memory_used_bytes`, `jvm_memory_committed_bytes`, `jvm_memory_max_bytes`, `jvm_memory_init_bytes` | gauge | `area` (heap / nonheap) | ヒープおよび非ヒープ領域のメモリ使用量 |
+| `jvm_memory_pool_used_bytes`, `jvm_memory_pool_committed_bytes`, `jvm_memory_pool_max_bytes` など | gauge | `pool` | メモリプール (Eden, Old Gen, Metaspace など) ごとの使用量 |
+| `jvm_gc_collection_seconds` | summary | `gc` | GC の実行回数と累計所要時間 |
+| `jvm_threads_current`, `jvm_threads_daemon`, `jvm_threads_peak`, `jvm_threads_started_total`, `jvm_threads_deadlocked` | gauge / counter | – | スレッド数とデッドロックの検出 |
+| `jvm_threads_state` | gauge | `state` | スレッド状態 (RUNNABLE, WAITING など) ごとのスレッド数 |
+| `jvm_classes_currently_loaded`, `jvm_classes_loaded_total`, `jvm_classes_unloaded_total` | gauge / counter | – | ロード済みクラス数とロード・アンロードの累計 |
+| `jvm_buffer_pool_used_bytes`, `jvm_buffer_pool_capacity_bytes`, `jvm_buffer_pool_used_buffers` | gauge | `pool` | direct / mapped バッファプールの使用状況 |
+| `jvm_compilation_time_seconds_total` | counter | – | JIT コンパイルに費やした累計時間 |
+| `jvm_runtime_info` | info | `version`, `vendor`, `runtime` | JVM のバージョンとベンダー |
+| `process_cpu_seconds_total` | counter | – | プロセスが使用した CPU 時間の累計 |
+| `process_start_time_seconds` | gauge | – | プロセスの起動時刻 (UNIX 時間) |
+| `process_open_fds`, `process_max_fds` | gauge | – | 開いているファイルディスクリプタ数と上限 |
+| `process_resident_memory_bytes`, `process_virtual_memory_bytes` | gauge | – | プロセスの常駐メモリと仮想メモリのサイズ |
+
+`process_*` の一部はプラットフォーム (OS や JVM の実装) によっては取得できず、その場合は公開されません。
+
+## スレッド安全性の設計
+
+Prometheus からのスクレイプは、プラグインが起動した HTTP サーバーのスレッド上で処理されます。
+Minecraft サーバーの API はメインスレッド以外から呼び出すと不整合やクラッシュの原因になるため、スクレイプの処理がゲームの状態に直接触れないように設計しています。
+
+### Paper
+
+Paper では、メトリクスの収集とスクレイプを明確に分離しています。
+
+1. `MetricsSampler` が、設定の `samplingIntervalTicks` の間隔でメインスレッド上のコルーチンとして起動し、各コレクターの `sample()` を呼び出します。
+2. `sample()` はプレイヤー数や TPS などを Bukkit API から読み取り、Prometheus のレジストリに登録済みのゲージへ値を書き込みます。この処理はメインスレッドで実行されるため、Bukkit API を安全に呼び出せます。
+3. プレイヤーの参加やチャンクのロードといったイベント駆動のカウンターは、イベントハンドラー内でカウンターをインクリメントするだけで、イベントの内容を読む以上の処理は行いません。
+4. HTTP サーバーのスクレイプスレッドは、レジストリに保持されているキャッシュ済みの値を読み取ってテキスト形式に変換するだけです。Bukkit API には一切触れません。
+
+この構成により、Prometheus のスクレイプ頻度やスクレイプの遅延がサーバーのティック処理に影響することはなく、逆にサーバーが重い状態でもスクレイプ自体は即座に応答できます。
+`sample()` の処理は軽量な読み取りのみで構成されており、コレクターの一つで例外が発生しても他のコレクターのサンプリングは継続します。
+
+### Velocity
+
+Velocity にはティックスレッドという概念がなく、プレイヤー数やバックエンドサーバーの情報はスレッドセーフなインメモリの構造から安価に読み取れます。
+そのため Velocity では、ゲージにコールバックを登録し、スクレイプのたびにその場で `ProxyServer` から値を読み取る方式を採用しています。
+
+ログインや切断、サーバー間移動などのカウンターは、Paper と同様にイベントハンドラーでインクリメントされます。
+これらのハンドラーは処理が自明で軽量なため、Velocity のイベントシステム上で同期的に実行されます。

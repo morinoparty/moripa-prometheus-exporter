@@ -12,6 +12,7 @@ ktlint = "14.2.0"
 mockk = "1.14.11"
 junit = "6.1.3"
 mockBukkit = "4.116.1"
+prometheus = "1.9.0"
 
 [libraries]
 paper-api = { group = "io.papermc.paper", name = "paper-api", version.ref = "paper" }
@@ -32,6 +33,12 @@ mccoroutine-velocity-api = { group = "com.github.shynixn.mccoroutine", name = "m
 mccoroutine-velocity-core = { group = "com.github.shynixn.mccoroutine", name = "mccoroutine-velocity-core", version.ref = "mccoroutine" }
 
 koin-core = { group = "io.insert-koin", name = "koin-core", version.ref = "koin" }
+
+# Prometheus client_java 1.x (メトリクスのコア / HTTP エクスポーター / JVM 計測 / テキスト形式出力)
+prometheus-core = { group = "io.prometheus", name = "prometheus-metrics-core", version.ref = "prometheus" }
+prometheus-httpserver = { group = "io.prometheus", name = "prometheus-metrics-exporter-httpserver", version.ref = "prometheus" }
+prometheus-jvm = { group = "io.prometheus", name = "prometheus-metrics-instrumentation-jvm", version.ref = "prometheus" }
+prometheus-textformats = { group = "io.prometheus", name = "prometheus-metrics-exposition-textformats", version.ref = "prometheus" }
 
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mock-bukkit = { group = "org.mockbukkit.mockbukkit", name = "mockbukkit-v26.2", version.ref = "mockBukkit" }
@@ -58,3 +65,4 @@ coroutines-bukkit = ["mccoroutine-bukkit-api", "mccoroutine-bukkit-core", "kotli
 coroutines-velocity = ["mccoroutine-velocity-api", "mccoroutine-velocity-core", "kotlinx-coroutines-core"]
 junit-jupiter = ["junit-jupiter", "junit-platform-launcher"]
 koin-test = ["koin-test", "koin-test-junit5"]
+prometheus = ["prometheus-core", "prometheus-httpserver", "prometheus-jvm"]

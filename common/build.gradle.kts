@@ -19,6 +19,21 @@ dependencies {
     compileOnly(libs.paper.api)
     compileOnly(libs.velocity.api)
     implementation(libs.kotlinx.serialization.json)
+
+    // Prometheus クライアント (レジストリ / HTTP エクスポーター / JVM メトリクス)
+    implementation(libs.bundles.prometheus)
+    // common のクラスは KoinComponent として依存を解決する
+    implementation(libs.koin.core)
+
+    // テスト依存関係
+    testImplementation(libs.bundles.junit.jupiter)
+    // スクレイプ結果をテキスト形式で検証するために使う
+    testImplementation(libs.prometheus.textformats)
+    testImplementation(libs.koin.core)
+}
+
+tasks.test {
+    useJUnitPlatform()
 }
 
 // ビルド時の値 (プラグインのバージョン、Kotlin のバージョン) を Kotlin の const val として生成する。

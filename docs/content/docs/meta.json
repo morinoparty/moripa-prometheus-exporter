@@ -1,7 +1,14 @@
 {
     "pages": [
+        "---はじめに---",
         "index",
-        "license-header",
-        "build-constants"
+        "getting-started",
+        "metrics",
+        "---Paper---",
+        "...paper",
+        "---Velocity---",
+        "...velocity",
+        "---リポジトリ---",
+        "...repository"
     ]
 }
