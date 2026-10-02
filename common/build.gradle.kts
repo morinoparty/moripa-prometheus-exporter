@@ -19,6 +19,12 @@ dependencies {
     compileOnly(libs.paper.api)
     compileOnly(libs.velocity.api)
     implementation(libs.kotlinx.serialization.json)
+    // 設定ファイル (config.conf) を HOCON 形式で読み書きする
+    implementation(libs.bundles.config)
+    // チケット機能の永続化 (Exposed + SQLite)。Paper の JAR に同梱する
+    implementation(libs.bundles.database)
+    // Exposed が依存する kotlin-reflect を、ビルドに使う Kotlin と同じバージョンに揃える
+    implementation(kotlin("reflect"))
 
     // Prometheus クライアント (レジストリ / HTTP エクスポーター / JVM メトリクス)
     implementation(libs.bundles.prometheus)
@@ -40,7 +46,7 @@ tasks.test {
 // @Plugin アノテーションの引数や PluginLoader で解決する kotlin-stdlib のバージョンは
 // コンパイル時定数である必要があるため、Gradle 側の値を BuildConstants.kt に書き出して参照させる。
 // パッケージ名を変更した場合はこの basePackage も合わせて変更すること。
-val basePackage = "party.morino.prometheusexporter"
+val basePackage = "party.morino.moripautils"
 val buildConstantsDir = layout.buildDirectory.dir("generated/sources/buildConstants/kotlin/main")
 
 val generateBuildConstants by tasks.registering {

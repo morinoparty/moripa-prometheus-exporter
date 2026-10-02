@@ -1,0 +1,6 @@
+{
+    "title": "Observability",
+    "description": "Prometheus 形式でのメトリクス公開と Grafana での可視化",
+    "icon": "Activity",
+    "pages": ["index", "getting-started", "metrics", "paper", "velocity"]
+}

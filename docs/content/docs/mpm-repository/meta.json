@@ -1,0 +1,6 @@
+{
+    "title": "mpm リポジトリ",
+    "description": "morinoparty の mpm リポジトリインデックス",
+    "icon": "Package",
+    "pages": ["index", "plugins"]
+}

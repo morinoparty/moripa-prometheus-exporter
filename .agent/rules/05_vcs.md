@@ -6,7 +6,7 @@
 - 別の作業があったとしても、できるだけすべてのファイルをステージングの対象とすること
 
 ## Repository
-- [moripa-prometheus-exporter](https://github.com/morinoparty/moripa-prometheus-exporter)
+- [moripa-utils](https://github.com/morinoparty/moripa-utils)
 
 ## コミットメッセージ
 - コミットメッセージは英語で書き、以下のような形式で書く。

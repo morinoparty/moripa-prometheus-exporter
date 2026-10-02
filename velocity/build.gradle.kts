@@ -35,6 +35,8 @@ dependencies {
 
     // JARにバンドル
     implementation(libs.koin.core)
+    // 設定ファイル (config.conf) の HOCON 形式
+    implementation(libs.bundles.config)
     // Prometheus クライアント (レジストリ / HTTP エクスポーター / JVM メトリクス)
     implementation(libs.bundles.prometheus)
 
@@ -58,7 +60,12 @@ tasks {
     }
     shadowJar {
         // 他プラグインが同梱する Prometheus クライアントとクラスが衝突しないようにパッケージを移動する
-        relocate("io.prometheus.metrics", "party.morino.prometheusexporter.libs.io.prometheus.metrics")
+        relocate("io.prometheus.metrics", "party.morino.moripautils.libs.io.prometheus.metrics")
+        // 同じプロキシ上の他プラグインも Koin を使うため、GlobalContext などが共有されないよう移動する
+        relocate("org.koin", "party.morino.moripautils.libs.org.koin")
+        // Typesafe Config も他プラグインが同梱していることがあるため移動する
+        relocate("com.typesafe.config", "party.morino.moripautils.libs.com.typesafe.config")
+        mergeServiceFiles()
         // 依存ライブラリのライセンスファイルが JAR 直下で重複しないよう除外する
         exclude("META-INF/LICENSE", "META-INF/NOTICE")
         dependencies {
@@ -67,7 +74,11 @@ tasks {
             exclude(dependency("org.jetbrains.kotlinx:kotlinx-coroutines-core-jvm:.*"))
             exclude(dependency("org.jetbrains.kotlinx:kotlinx-coroutines-jdk8:.*"))
             exclude(dependency("org.jetbrains.kotlinx:kotlinx-coroutines-bom:.*"))
-            exclude(dependency("org.jetbrains.kotlinx:kotlinx-serialization-.*:.*"))
+            // kotlinx.serialization の core / json は実行環境が提供するが、HOCON フォーマットは同梱する必要があるため除外しない
+            exclude(dependency("org.jetbrains.kotlinx:kotlinx-serialization-(core|json).*:.*"))
+            // チケット機能は Paper 専用で Velocity では使わないため、Exposed / SQLite (ネイティブ込みで十数 MB) は同梱しない
+            exclude(dependency("org.jetbrains.exposed:.*:.*"))
+            exclude(dependency("org.xerial:sqlite-jdbc:.*"))
         }
     }
     test {

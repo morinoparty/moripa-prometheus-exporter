@@ -12,9 +12,9 @@ export async function GET() {
 		return `- [${title}](${url}): ${description}`;
 	});
 
-	const content = `# MoripaPrometheusExporter Documentation
+	const content = `# MoripaUtils Documentation
 
-> MoripaPrometheusExporter is a Prometheus exporter plugin for Minecraft (Paper / Velocity) that exposes player count, TPS and other server metrics for Grafana.
+> MoripaUtils is morinoparty's utility plugin for Minecraft (Paper / Velocity). Its features include observability (a Prometheus exporter exposing player count, TPS and other server metrics for Grafana) and ticket (an in-game /ticket inquiry UI). This site also hosts the morinoparty mpm repository index.
 
 ## Documentation Pages
 

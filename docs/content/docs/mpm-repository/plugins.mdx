@@ -1,0 +1,92 @@
+---
+title: プラグインと子リポジトリの追加
+description: morinoparty の mpm リポジトリにプラグインや子リポジトリを追加する手順
+---
+
+# プラグインと子リポジトリの追加
+
+このページでは、morinoparty の mpm リポジトリにプラグインの定義や子リポジトリへのリンクを追加する手順を説明します。
+いずれの場合も、変更するのはこのリポジトリの `docs/mpm/` 以下のファイルだけであり、mpm の中央リポジトリを変更する必要はありません。
+
+## プラグインを追加する
+
+morinoparty のプラグインを追加する場合は、`docs/mpm/plugins/` に `<プラグイン名>.json` を 1 つ追加します。
+たとえば MoripaUtils の定義は次のとおりです。
+
+```json title="docs/mpm/plugins/MoripaUtils.json"
+{
+  "$schema": "https://repo.mpm.nikomaru.dev/schema/plugin-info/v1.json",
+  "id": "MoripaUtils",
+  "license": "CC0-1.0",
+  "website": "https://utils.plugin.morino.party",
+  "source": "https://github.com/morinoparty/moripa-utils",
+  "repositories": [
+    {
+      "type": "github",
+      "id": "morinoparty/moripa-utils",
+      "fileNameRegex": "MoripaUtils-paper-.*\\.jar$"
+    }
+  ]
+}
+```
+
+主なフィールドは次のとおりです。
+`$schema` を指定しておくと、エディターでスキーマに基づく補完と検証が利用できます。
+
+| フィールド | 必須 | 内容 |
+|-----------|------|------|
+| `id` | 必須 | プラグイン名。ファイル名 (拡張子を除く) と完全に一致させる必要があります |
+| `repositories` | 必須 | ダウンロード元の一覧。少なくとも 1 件必要です |
+| `website` | 任意 | プラグインのウェブサイトの URL |
+| `source` | 任意 | ソースコードの URL |
+| `license` | 任意 | SPDX ライセンス識別子 |
+| `dependencies` / `softDependencies` | 任意 | 依存するプラグイン名の一覧 |
+| `defaultVersion` | 任意 | バージョンを明示しなかった場合に使われる指定 (例: `tag:beta`) |
+
+`repositories` の各エントリには `type` (`github`、`modrinth`、`spigotmc`、`hangar` など) と `id` を指定します。
+GitHub のリリースに複数の JAR が添付されている場合は、`fileNameRegex` で対象のファイルを選びます。
+その他のフィールドについては、mpm の [PluginInfo スキーマ](https://repo.mpm.nikomaru.dev/schema/plugin-info/v1.json) を参照してください。
+
+プラグイン名には英数字、`_`、`-` だけが使えます。
+ビルドスクリプトは次の場合にエラーで終了するため、誤った定義が公開されることはありません。
+
+- `id` とファイル名が一致しない
+- プラグイン名に使えない文字が含まれている
+- `repositories` が空である、または `type` と `id` のないエントリがある
+
+## 子リポジトリを追加する
+
+個別のプラグインが自身のドキュメントサイトなどで独自のインデックスを配信している場合は、そのインデックスを子リポジトリとしてリンクします。
+子リポジトリを追加するには、`docs/mpm/children.json` にエントリを 1 件追加します。
+
+```json title="docs/mpm/children.json"
+[
+  {
+    "index": "https://mineauth.plugin.morino.party/mpm/paper/index.json"
+  },
+  {
+    "index": "https://fishing.plugin.morino.party/mpm/paper/index.json"
+  }
+]
+```
+
+`index` には子リポジトリの `index.json` の絶対 URL を指定します。
+URL は `https://` で始まり、`.json` で終わる必要があります。また、同じ URL を重複して記載することはできません。
+
+子リポジトリが名乗れる配布元を制限したい場合は、`allowedSources` に `"type:id"` 形式で許可する配布元を列挙します (例: `"github:morinoparty/MineAuth"`)。
+末尾の `*` のみワイルドカードとして使えます。省略した場合は制限されません。
+
+子リポジトリ側では、このサイトと同様に `index.json` を静的ファイルとして配信します。
+MineAuth の `docs/scripts/build-mpm-index.mjs` が実装例として参考になります。
+
+## 変更を確認する
+
+定義を追加したら、次のコマンドで `index.json` を生成し、エラーが出ないことを確認します。
+
+```bash
+cd docs
+pnpm run build:mpm-index
+```
+
+生成された `docs/public/mpm/paper/index.json` に追加したプラグインやリンクが含まれていれば完了です。
+変更を `main` ブランチにマージすると、ドキュメントサイトのデプロイとともに公開されます。

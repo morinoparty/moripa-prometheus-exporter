@@ -5,7 +5,7 @@ export function baseOptions(): BaseLayoutProps {
         nav: {
             title: (
                 <div className="flex items-center gap-2">
-                    <span className="text-lg font-bold">MoripaPrometheusExporter</span>
+                    <span className="text-lg font-bold">MoripaUtils</span>
                 </div>
             ),
             transparentMode: "top",
@@ -13,7 +13,7 @@ export function baseOptions(): BaseLayoutProps {
         themeSwitch: {
             enabled: false,
         },
-        modrinthUrl: "https://modrinth.com/plugin/moripa-prometheus-exporter",
-        githubUrl: "https://github.com/morinoparty/moripa-prometheus-exporter",
+        modrinthUrl: "https://modrinth.com/plugin/moripa-utils",
+        githubUrl: "https://github.com/morinoparty/moripa-utils",
     };
 }

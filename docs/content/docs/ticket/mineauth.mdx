@@ -1,0 +1,85 @@
+---
+title: MineAuth 連携
+description: MineAuth を通じてチケットを参照する HTTP API
+---
+
+# MineAuth 連携
+
+[MineAuth](https://github.com/morinoparty/MineAuth) が導入されている場合、チケットを参照する HTTP API が MineAuth に登録されます。
+MineAuth は任意の依存関係です。導入されていない場合でも、`/ticket` によるお問い合わせはそのまま利用できます。
+
+エンドポイントは `/api/v1/plugins/moripautils` 配下に登録されます。
+MineAuth 同梱の PureTickets アドオンが使用する `tickets` 名前空間とは衝突しないため、両者を同じサーバーで併用できます。
+ただし、どちらも `/ticket` コマンドを登録するため、併用する場合はどちらのコマンドが有効になるかに注意してください。
+認証には MineAuth が発行するトークンを使用します。トークンの発行方法は MineAuth のドキュメントを参照してください。
+
+## エンドポイント
+
+| メソッド | パス | 呼び出せるトークン | 必要な権限 | 説明 |
+|---------|------|------------------|-----------|------|
+| `GET` | `/tickets` | ユーザー / サービス | `moripautils.ticket.staff` | すべてのチケットの一覧を取得します。 |
+| `GET` | `/tickets/{id}` | ユーザー / サービス | `moripautils.ticket.staff` | 指定した番号のチケットを取得します。 |
+| `GET` | `/me/tickets` | ユーザー | なし | 認証したプレイヤー自身のチケットの一覧を取得します。 |
+
+権限はユーザートークンに対してのみ確認されます。サービストークンは権限の確認の対象外です。
+
+### `GET /tickets`
+
+すべてのチケットを、チケット番号の昇順で取得します。
+
+| クエリ | 説明 |
+|-------|------|
+| `category` | カテゴリーの `id` で絞り込みます。 |
+| `status` | 状態 (`OPEN` / `CLOSED`) で絞り込みます。大文字と小文字は区別しません。不明な値を指定すると `400` になります。 |
+| `cursor` | 前のページの `nextCursor` を指定すると、続きから取得します。 |
+| `limit` | 1 ページの件数です。省略時は 50 件で、200 件を超える値は 200 件として扱われます。0 以下を指定すると `400` になります。 |
+
+### `GET /tickets/{id}`
+
+指定した番号のチケットを 1 件取得します。チケットが存在しない場合は `404` になります。
+
+### `GET /me/tickets`
+
+認証したプレイヤー自身が送信したチケットを、チケット番号の昇順で取得します。
+`cursor` と `limit` は `GET /tickets` と同様に指定できます。
+
+## レスポンス
+
+チケット 1 件は次の形式で返されます。
+
+```json
+{
+    "id": 12,
+    "server": "main",
+    "playerUuid": "069a79f4-44e9-4726-a5be-fca90e38aaf5",
+    "playerName": "Notch",
+    "categoryId": "bug",
+    "categoryName": "バグの報告",
+    "content": "スポーン地点のブロックが消えています。",
+    "status": "OPEN",
+    "createdAt": "2026-10-02T12:34:56.789Z"
+}
+```
+
+| フィールド | 説明 |
+|-----------|------|
+| `id` | チケット番号です。 |
+| `server` | 送信元のサーバーです (`config.conf` の `server`)。 |
+| `playerUuid` / `playerName` | 送信したプレイヤーの UUID と、送信時点の名前です。 |
+| `categoryId` / `categoryName` | カテゴリーの `id` と表示名です。設定からカテゴリーが削除されている場合、`categoryName` は `null` になります。 |
+| `content` | お問い合わせの内容です。 |
+| `status` | 状態です (`OPEN` / `CLOSED`)。 |
+| `createdAt` | 送信日時です (ISO-8601 形式、UTC)。 |
+
+一覧のエンドポイントは、チケットの配列とページングの情報を返します。
+
+```json
+{
+    "tickets": [ { "id": 12, "...": "..." } ],
+    "nextCursor": 12,
+    "hasMore": true
+}
+```
+
+`hasMore` が `true` の場合は、`nextCursor` の値を `cursor` に指定して次のページを取得します。
+`hasMore` が `false` の場合、`nextCursor` は `null` になります。
