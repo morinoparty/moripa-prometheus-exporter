@@ -1,0 +1,136 @@
+---
+title: 設定ファイル
+description: MoripaUtils の設定ファイル (config.conf) の構成と各項目の説明
+icon: Settings
+---
+
+# 設定ファイル
+
+MoripaUtils の設定は、プラグインのデータディレクトリに置かれる `config.conf` にまとめて記述します。
+ファイルの形式は [HOCON](https://github.com/lightbend/config/blob/main/HOCON.md) です。
+HOCON は JSON の上位互換の書式で、`#` によるコメントや、キーと値の間に `=` を使う書き方、文字列の引用符の省略などが可能です。
+
+| プラットフォーム | 設定ファイルのパス |
+|-----------------|-------------------|
+| Paper | `plugins/MoripaUtils/config.conf` |
+| Velocity | `plugins/moripa-utils/config.conf` |
+
+`config.conf` が存在しない状態でサーバーまたはプロキシを起動すると、デフォルト値を記述したファイルが自動的に生成されます。
+設定ファイルに書かれていないキーはデフォルト値で補われるため、変更したい項目だけを記述することもできます。
+設定を変更した場合は、サーバーまたはプロキシを再起動して反映してください。
+
+<Callout type="warn">
+以前のバージョンで使われていた JSON 形式の `config.json` は読み込まれません。
+旧形式の設定を使っていた場合は、新しく生成された `config.conf` に値を移してください。
+</Callout>
+
+## デフォルトの設定
+
+Paper で生成されるデフォルトの `config.conf` は以下のとおりです。
+生成されるファイルではキーがアルファベット順に並びます。
+
+```text
+# MoripaUtils configuration (HOCON)
+# https://utils.plugin.morino.party/docs/config
+observability {
+    enabled=true
+    http {
+        host="0.0.0.0"
+        path="/metrics"
+        port=9225
+    }
+    metrics {
+        jvm=true
+        samplingIntervalTicks=20
+    }
+}
+server=main
+ticket {
+    categories=[
+        {
+            id=bug
+            name=バグの報告
+        },
+        {
+            id=protect
+            name=土地保護について
+        },
+        {
+            id=other
+            name=その他
+        }
+    ]
+    database {
+        file="tickets.db"
+    }
+    enabled=true
+    webhook {
+        url=""
+    }
+}
+```
+
+Velocity では、`server` のデフォルト値が `proxy`、`observability.http.port` のデフォルト値が `9226` になります。
+チケット機能は Paper 専用のため、`ticket` ブロックは Velocity では使用されません (値の検証は行われます)。
+
+## 共通の項目
+
+| キー | デフォルト | 説明 |
+|------|-----------|------|
+| `server` | `main` (Paper) / `proxy` (Velocity) | このサーバーを識別する名前です。複数のサーバーを運用している場合に、メトリクスのラベルやチケットの送信元としてサーバーを区別するために使用します。英数字、ハイフン (`-`)、アンダースコア (`_`) のみ使用できます。 |
+
+`server` の値は、Prometheus のメトリクス `minecraft_server_info` (Paper) と `velocity_proxy_info` (Velocity) の `server` ラベルとして公開されます。
+
+## observability
+
+`observability` ブロックでは、Prometheus 形式でメトリクスを公開する observability 機能を設定します。
+
+| キー | デフォルト | 説明 |
+|------|-----------|------|
+| `observability.enabled` | `true` | observability 機能を有効にするかどうかです。`false` にするとメトリクス用の HTTP サーバーは起動しません。 |
+| `observability.http.host` | `"0.0.0.0"` | HTTP サーバーが待ち受けるアドレスです。 |
+| `observability.http.port` | `9225` (Paper) / `9226` (Velocity) | HTTP サーバーが待ち受けるポートです。 |
+| `observability.http.path` | `"/metrics"` | メトリクスを公開する HTTP パスです。 |
+| `observability.metrics.jvm` | `true` | JVM / プロセスのメトリクスを公開するかどうかです。 |
+| `observability.metrics.samplingIntervalTicks` | `20` | Paper でメインスレッド上のサンプリングを行う間隔 (ティック数) です。`1` 以上を指定する必要があります。 |
+
+各項目の詳しい説明は [Observability の Getting Started](/docs/observability/getting-started) を参照してください。
+
+## ticket
+
+`ticket` ブロックでは、`/ticket` コマンドによるお問い合わせ機能を設定します。
+この機能は Paper でのみ動作します。
+
+| キー | デフォルト | 説明 |
+|------|-----------|------|
+| `ticket.enabled` | `true` | チケット機能を有効にするかどうかです。`false` にするとチケット機能は読み込まれません。 |
+| `ticket.categories` | `bug` / `protect` / `other` の 3 件 | プレイヤーが選択できるお問い合わせのカテゴリーです。記述した順に表示されます。 |
+| `ticket.webhook.url` | `""` | 新しいチケットを通知する Webhook の URL です。空文字の場合は通知を行いません。 |
+| `ticket.database.file` | `"tickets.db"` | チケットを保存する SQLite データベースのファイル名です。プラグインのデータディレクトリからの相対パスで指定します。 |
+
+### カテゴリー
+
+`ticket.categories` の各要素は `id` と `name` を持ちます。
+
+| キー | 説明 |
+|------|------|
+| `id` | カテゴリーを識別する ID です。データベースに保存されるため、運用開始後に変更すると既存のチケットと対応しなくなります。英小文字、数字、ハイフン (`-`)、アンダースコア (`_`) のみ使用でき、カテゴリー間で重複してはいけません。 |
+| `name` | プレイヤーに表示されるカテゴリー名です。空にはできません。 |
+
+カテゴリーを 1 件も指定しない場合や、`id` の形式が不正な場合、`id` が重複している場合は、設定ファイルの読み込み時にエラーになり、プラグインは有効化されません。
+
+```text
+ticket {
+    categories = [
+        { id = "bug", name = "バグの報告" }
+        { id = "report", name = "プレイヤーの通報" }
+        { id = "other", name = "その他" }
+    ]
+}
+```
+
+## 設定の検証
+
+設定ファイルの読み込み時には、HOCON の構文と各項目の値が検証されます。
+構文に誤りがある場合や、値が条件を満たさない場合は、起動ログに設定ファイルのパスとエラーの内容が出力され、プラグインは有効化されません。
+誤った設定のまま黙ってデフォルト値で動作することを避けるため、この挙動になっています。

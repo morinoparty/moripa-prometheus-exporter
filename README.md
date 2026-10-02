@@ -1,14 +1,23 @@
-# moripa-prometheus-exporter
+# moripa-utils
 
-morinoparty の Minecraft サーバー向け Prometheus exporter プラグインです。
-プレイヤー人数やサーバーの TPS などのメトリクスを Prometheus 形式で公開し、Grafana で可視化することを目的としています。
+morinoparty の Minecraft サーバー向けユーティリティプラグイン「MoripaUtils」です (旧名: MoripaPrometheusExporter)。
+運営に必要な機能を機能 (feature) 単位でまとめて提供します。
 Paper / Velocity 両対応のマルチモジュール構成になっています。
 
-📖 ドキュメント: https://prometheus-exporter.plugin.morino.party/
+| 機能 | 内容 |
+|------|------|
+| observability | プレイヤー人数やサーバーの TPS などのメトリクスを Prometheus 形式で公開し、Grafana で可視化する |
+| ticket | `/ticket` コマンドから運営への問い合わせ (チケット) を送信できる UI (MineAuth 導入時は HTTP API から自分のチケットを参照可能) |
 
-## 公開されるメトリクス
+ドキュメントサイトでは morinoparty の mpm リポジトリインデックスもホストしています。
 
-主要なメトリクスは以下のとおりです。完全な一覧は [Paper Metrics](https://prometheus-exporter.plugin.morino.party/docs/paper/metrics) / [Velocity Metrics](https://prometheus-exporter.plugin.morino.party/docs/velocity/metrics) を参照してください。
+📖 ドキュメント: https://utils.plugin.morino.party/
+
+## 公開されるメトリクス (observability)
+
+プロジェクト名の変更後も、メトリクス名は変更していません。
+
+主要なメトリクスは以下のとおりです。完全な一覧は [Paper Metrics](https://utils.plugin.morino.party/docs/observability/paper/metrics) / [Velocity Metrics](https://utils.plugin.morino.party/docs/observability/velocity/metrics) を参照してください。
 
 | メトリクス | 型 | 対象 | 内容 |
 |-----------|-----|------|------|
@@ -23,7 +32,7 @@ Paper / Velocity 両対応のマルチモジュール構成になっています
 | `jvm_*` / `process_*` | – | Paper / Velocity | JVM メモリ使用量、GC、スレッド数などのランタイム情報 |
 
 メトリクスは `http://<host>:9225/metrics` (Paper) / `http://<host>:9226/metrics` (Velocity) で公開されます。
-導入手順や設定については[ドキュメント](https://prometheus-exporter.plugin.morino.party/docs/getting-started)を参照してください。
+導入手順や設定については[ドキュメント](https://utils.plugin.morino.party/docs/observability/getting-started)を参照してください。
 
 ## モジュール構成
 
@@ -129,7 +138,7 @@ Velocity モジュールでは kapt で `@Plugin` を処理して `velocity-plug
 | `preview.yml` | Pull Request | プレビュービルド・S3 アップロード・PR コメント |
 | `upload.yml` | Release published | GitHub Release にJAR をアップロード |
 | `release.yml` | Push to main | Release Drafter でドラフトリリース作成 |
-| `deploy_docs.yml` | Push to main (docs/) | GitHub Pages (`prometheus-exporter.plugin.morino.party`) にドキュメントデプロイ |
+| `deploy_docs.yml` | Push to main (docs/) | GitHub Pages (`utils.plugin.morino.party`) にドキュメントデプロイ |
 | `dependabot_auto_merge.yml` | Dependabot PR | 自動マージ |
 | `sync-label.yml` | labels.json 変更 | GitHub ラベル同期 |
 

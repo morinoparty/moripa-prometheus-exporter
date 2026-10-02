@@ -1,0 +1,81 @@
+---
+title: 設定
+description: チケット機能の設定項目 (config.conf の ticket ブロック)
+---
+
+# 設定
+
+チケット機能の設定は、`config.conf` の `ticket` ブロックに記述します。
+設定ファイル全体の構成は [設定ファイル](/docs/config) を参照してください。
+設定を変更した場合は、サーバーを再起動して反映してください。
+
+## デフォルトの設定
+
+```text
+ticket {
+    categories=[
+        {
+            id=bug
+            name=バグの報告
+        },
+        {
+            id=protect
+            name=土地保護について
+        },
+        {
+            id=other
+            name=その他
+        }
+    ]
+    database {
+        file="tickets.db"
+    }
+    enabled=true
+    webhook {
+        url=""
+    }
+}
+```
+
+## 設定項目
+
+| キー | デフォルト | 説明 |
+|------|-----------|------|
+| `ticket.enabled` | `true` | チケット機能を有効にするかどうかです。`false` にすると `/ticket` コマンド、データベース、MineAuth の HTTP API はいずれも登録されません。 |
+| `ticket.categories` | `bug` / `protect` / `other` の 3 件 | Dialog に表示するカテゴリーです。記述した順に表示され、先頭のカテゴリーが初期選択になります。 |
+| `ticket.webhook.url` | `""` | 新しいチケットを通知する Discord Webhook の URL です。空文字の場合は通知を行いません。 |
+| `ticket.database.file` | `"tickets.db"` | チケットを保存する SQLite データベースのファイルです。相対パスはプラグインのデータディレクトリを基準に解決されます。存在しないディレクトリは自動的に作成されます。 |
+
+## カテゴリー
+
+各カテゴリーは `id` と `name` を持ちます。
+
+| キー | 説明 |
+|------|------|
+| `id` | データベースに保存される識別子です。英小文字・数字・ハイフン・アンダースコアのみ使用できます。 |
+| `name` | Dialog や通知に表示される名前です。空にはできません。 |
+
+`id` はチケットとともにデータベースへ保存されます。
+既存のカテゴリーの `id` を変更すると、変更前に送信されたチケットとカテゴリーの対応が失われるため注意してください。
+カテゴリーを削除した場合も既存のチケットは残りますが、HTTP API の `categoryName` は `null` になります。
+
+## Discord Webhook
+
+Discord のチャンネル設定から Webhook を作成し、その URL を `ticket.webhook.url` に設定します。
+
+```text
+ticket {
+    webhook {
+        url = "https://discord.com/api/webhooks/xxxxxxxx/yyyyyyyy"
+    }
+}
+```
+
+Webhook の送信は 10 秒でタイムアウトします。
+送信に失敗した場合やエラーの応答が返った場合は、サーバーのログに警告が記録されます。
+
+## 起動時の動作
+
+チケット機能に関する設定は、サーバーの起動処理の早い段階 (ブートストラップ) と、プラグインの有効化時の 2 回読み込まれます。
+`/ticket` コマンドはブートストラップの段階で登録されるため、`ticket.enabled` の変更はサーバーの再起動で反映されます。
+`config.conf` の内容が不正な場合は、コマンドを登録せずに起動処理を続け、プラグインの有効化時にエラーとして停止します。

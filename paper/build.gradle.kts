@@ -7,6 +7,9 @@
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
+import xyz.jpenilla.resourcefactory.bukkit.Permission
+import xyz.jpenilla.resourcefactory.paper.PaperPluginYaml
+
 plugins {
     java
     alias(libs.plugins.kotlin.jvm)
@@ -27,6 +30,12 @@ dependencies {
     implementation(libs.bundles.commands.paper)
 
     implementation(libs.kotlinx.serialization.json)
+    // 設定ファイル (config.conf) の HOCON 形式 (common と同じものを Paper 側のコードからも参照できるようにする)
+    implementation(libs.bundles.config)
+    // チケット機能の永続化 (Exposed + SQLite)。Paper 側でテーブル定義やリポジトリを書けるようにする
+    implementation(libs.bundles.database)
+    // MineAuth の公開 API。実行時は MineAuth プラグインのクラスを joinClasspath で参照するため同梱しない
+    compileOnly(libs.mineauth.api)
     implementation(libs.bundles.coroutines.bukkit)
 
     // JARにバンドル
@@ -50,7 +59,20 @@ tasks {
     }
     shadowJar {
         // 他プラグインが同梱する Prometheus クライアントとクラスが衝突しないようにパッケージを移動する
-        relocate("io.prometheus.metrics", "party.morino.prometheusexporter.libs.io.prometheus.metrics")
+        relocate("io.prometheus.metrics", "party.morino.moripautils.libs.io.prometheus.metrics")
+        // MineAuth など同じサーバー上の他プラグインも Koin を使うため、GlobalContext などが共有されないよう移動する
+        relocate("org.koin", "party.morino.moripautils.libs.org.koin")
+        // Typesafe Config も他プラグインが同梱していることがあるため移動する
+        relocate("com.typesafe.config", "party.morino.moripautils.libs.com.typesafe.config")
+        // SQLite の JDBC ドライバー (org.xerial:sqlite-jdbc) は Paper 本体がサーバーのクラスパスに同梱しており、
+        // プラグインのクラスローダーは親 (サーバー) を優先するため、同梱しても使われない。
+        // 約 13MB のネイティブライブラリを JAR に含めないよう除外し、実行時はサーバー同梱のドライバーを使う。
+        // (org.sqlite はネイティブライブラリのパスをパッケージ名から求めるため、relocate で新しい版を使うこともできない)
+        dependencies {
+            exclude(dependency("org.xerial:sqlite-jdbc:.*"))
+        }
+        // Exposed の JDBC 接続自動登録 (META-INF/services) を JAR 内で結合して失わないようにする
+        mergeServiceFiles()
         // 依存ライブラリのライセンスファイルが JAR 直下で重複しないよう除外する
         exclude("META-INF/LICENSE", "META-INF/NOTICE")
     }
@@ -72,11 +94,32 @@ sourceSets.main {
         paperPluginYaml {
             name = rootProject.name
             version = project.version.toString()
-            website = "https://github.com/morinoparty/moripa-prometheus-exporter"
-            main = "$group.prometheusexporter.paper.MoripaPrometheusExporter"
-            bootstrapper = "$group.prometheusexporter.paper.MoripaPrometheusExporterBootstrap"
-            loader = "$group.prometheusexporter.paper.MoripaPrometheusExporterLoader"
+            website = "https://github.com/morinoparty/moripa-utils"
+            main = "$group.moripautils.paper.MoripaUtils"
+            bootstrapper = "$group.moripautils.paper.MoripaUtilsBootstrap"
+            loader = "$group.moripautils.paper.MoripaUtilsLoader"
             apiVersion = "26.2"
+            dependencies {
+                // MineAuth は任意依存。先にロードし、joinClasspath で mineauth-api のクラスを参照できるようにする
+                server("MineAuth", load = PaperPluginYaml.Load.BEFORE, required = false, joinClasspath = true)
+            }
+            permissions {
+                // /ticket でお問い合わせを送信する権限 (全員に許可)
+                register("moripautils.ticket.use") {
+                    description = "Allows submitting tickets with /ticket"
+                    default = Permission.Default.TRUE
+                }
+                // 新しいチケットの通知を受け取る権限
+                register("moripautils.ticket.notify") {
+                    description = "Receives notifications of new tickets"
+                    default = Permission.Default.OP
+                }
+                // チケットの閲覧や対応を行うスタッフ向けの権限
+                register("moripautils.ticket.staff") {
+                    description = "Allows viewing and handling tickets"
+                    default = Permission.Default.OP
+                }
+            }
         }
     }
 }

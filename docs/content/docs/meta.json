@@ -2,12 +2,12 @@
     "pages": [
         "---はじめに---",
         "index",
-        "getting-started",
-        "metrics",
-        "---Paper---",
-        "...paper",
-        "---Velocity---",
-        "...velocity",
+        "config",
+        "---機能---",
+        "observability",
+        "ticket",
+        "---その他---",
+        "mpm-repository",
         "---リポジトリ---",
         "...repository"
     ]

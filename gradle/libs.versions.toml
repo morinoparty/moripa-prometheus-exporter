@@ -13,6 +13,11 @@ mockk = "1.14.11"
 junit = "6.1.3"
 mockBukkit = "4.116.1"
 prometheus = "1.9.0"
+typesafeConfig = "1.4.9"
+exposed = "1.5.0"
+# テスト用。Paper では JAR に同梱せず、サーバー同梱の sqlite-jdbc (Paper 26.x では 3.49.1.0) を実行時に使う
+sqlite = "3.53.4.0"
+mineauth = "0.5.1"
 
 [libraries]
 paper-api = { group = "io.papermc.paper", name = "paper-api", version.ref = "paper" }
@@ -25,6 +30,9 @@ cloudPaper = { group = "org.incendo", name = "cloud-paper", version.ref = "cloud
 cloudVelocity = { group = "org.incendo", name = "cloud-velocity", version.ref = "cloudPaper" }
 
 kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json-jvm", version.ref = "serialization" }
+# 設定ファイル (config.conf) を HOCON で読み書きするための kotlinx.serialization フォーマットと Typesafe Config 本体
+kotlinx-serialization-hocon = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-hocon", version.ref = "serialization" }
+typesafe-config = { group = "com.typesafe", name = "config", version.ref = "typesafeConfig" }
 kotlinx-coroutines-core = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-core-jvm", version.ref = "coroutine" }
 
 mccoroutine-bukkit-api = { group = "com.github.shynixn.mccoroutine", name = "mccoroutine-bukkit-api", version.ref = "mccoroutine" }
@@ -39,6 +47,15 @@ prometheus-core = { group = "io.prometheus", name = "prometheus-metrics-core", v
 prometheus-httpserver = { group = "io.prometheus", name = "prometheus-metrics-exporter-httpserver", version.ref = "prometheus" }
 prometheus-jvm = { group = "io.prometheus", name = "prometheus-metrics-instrumentation-jvm", version.ref = "prometheus" }
 prometheus-textformats = { group = "io.prometheus", name = "prometheus-metrics-exposition-textformats", version.ref = "prometheus" }
+
+# チケット機能の永続化 (Exposed + SQLite)
+exposed-core = { group = "org.jetbrains.exposed", name = "exposed-core", version.ref = "exposed" }
+exposed-jdbc = { group = "org.jetbrains.exposed", name = "exposed-jdbc", version.ref = "exposed" }
+exposed-java-time = { group = "org.jetbrains.exposed", name = "exposed-java-time", version.ref = "exposed" }
+sqlite = { group = "org.xerial", name = "sqlite-jdbc", version.ref = "sqlite" }
+
+# MineAuth の公開 API (Web からのチケット操作などで連携する。実行時は MineAuth プラグイン側のクラスを使う)
+mineauth-api = { group = "party.morino", name = "mineauth-api", version.ref = "mineauth" }
 
 mockk = { group = "io.mockk", name = "mockk", version.ref = "mockk" }
 mock-bukkit = { group = "org.mockbukkit.mockbukkit", name = "mockbukkit-v26.2", version.ref = "mockBukkit" }
@@ -65,4 +82,6 @@ coroutines-bukkit = ["mccoroutine-bukkit-api", "mccoroutine-bukkit-core", "kotli
 coroutines-velocity = ["mccoroutine-velocity-api", "mccoroutine-velocity-core", "kotlinx-coroutines-core"]
 junit-jupiter = ["junit-jupiter", "junit-platform-launcher"]
 koin-test = ["koin-test", "koin-test-junit5"]
+config = ["kotlinx-serialization-hocon", "typesafe-config"]
+database = ["exposed-core", "exposed-jdbc", "exposed-java-time", "sqlite"]
 prometheus = ["prometheus-core", "prometheus-httpserver", "prometheus-jvm"]

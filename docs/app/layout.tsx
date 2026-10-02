@@ -5,10 +5,10 @@ import { Provider } from "@/components/provider";
 
 export const metadata: Metadata = {
 	title: {
-		template: "%s | MoripaPrometheusExporter",
-		default: "MoripaPrometheusExporter Documentation",
+		template: "%s | MoripaUtils",
+		default: "MoripaUtils Documentation",
 	},
-	description: "Prometheus exporter for Minecraft (Paper / Velocity) — player count, TPS and more for Grafana",
+	description: "morinoparty utility plugin for Minecraft (Paper / Velocity) — observability (Prometheus metrics), tickets and more",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

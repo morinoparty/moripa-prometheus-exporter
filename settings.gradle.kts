@@ -7,7 +7,7 @@
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
-rootProject.name = "MoripaPrometheusExporter"
+rootProject.name = "MoripaUtils"
 
 pluginManagement {
     repositories {

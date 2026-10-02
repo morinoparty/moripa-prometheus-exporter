@@ -1,10 +1,11 @@
 {
-    "name": "moripa-prometheus-exporter-docs",
+    "name": "moripa-utils-docs",
     "private": true,
     "version": "0.0.1",
     "scripts": {
         "dev": "next dev",
-        "build": "next build && node scripts/postbuild.mjs",
+        "build:mpm-index": "node scripts/build-mpm-index.mjs",
+        "build": "pnpm run build:mpm-index && next build && node scripts/postbuild.mjs",
         "start": "next start"
     },
     "dependencies": {

@@ -21,11 +21,11 @@ Paper の `PluginLoader` はプラグイン本体のクラスがロードされ�
 ```kotlin
 // Velocity: @Plugin の version を gradle.properties と連動させる
 @Plugin(
-    id = "moripa-prometheus-exporter",
-    name = "MoripaPrometheusExporter",
+    id = "moripa-utils",
+    name = "MoripaUtils",
     version = BuildConstants.VERSION,
 )
-class MoripaPrometheusExporter
+class MoripaUtils
 
 // Paper: ビルドに使った Kotlin と同じバージョンの stdlib を解決する
 resolver.addDependency(
@@ -40,7 +40,7 @@ resolver.addDependency(
 
 ```kotlin
 // common/build.gradle.kts
-val basePackage = "party.morino.prometheusexporter"
+val basePackage = "party.morino.moripautils"
 ```
 
 ## Velocity の velocity-plugin.json 生成
