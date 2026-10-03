@@ -1,0 +1,127 @@
+---
+title: データベース
+description: 各機能が共有するデータベース (SQLite / MySQL) の設定
+icon: Database
+---
+
+# データベース
+
+MoripaUtils は、データを保存する機能 (現在はチケット機能) のために、プラグイン全体で 1 つのデータベースを使用します。
+各機能は、このデータベースの中に機能ごとのテーブルを作成してデータを保存します。
+データベースの設定は `config.conf` の `database` ブロックに記述します。
+
+データベースとして、SQLite と MySQL を使用できます。
+
+| 種類 | `database.type` | 説明 |
+|------|-----------------|------|
+| SQLite | `sqlite` (デフォルト) | プラグインのデータディレクトリにファイルとして保存します。追加のサーバーは不要です。 |
+| MySQL | `mysql` | 外部の MySQL サーバーに保存します。複数の Paper サーバーで同じデータを共有できます。 |
+
+<Callout type="info">
+データベースは Paper でのみ使用されます。Velocity では `database` ブロックは使用されません。
+JDBC ドライバーは Paper 本体に同梱されているもの (`sqlite-jdbc` / `mysql-connector-j`) を使用するため、別途導入する必要はありません。
+</Callout>
+
+## デフォルトの設定
+
+```text
+database {
+    mysql {
+        database="moripa_utils"
+        host=localhost
+        password=""
+        port=3306
+        properties {}
+        user=root
+    }
+    sqlite {
+        file="moripa-utils.db"
+    }
+    type=sqlite
+}
+```
+
+`database.type` で選択した種類のブロックのみが使用され、もう一方のブロックは無視されます。
+
+## 設定項目
+
+| キー | デフォルト | 説明 |
+|------|-----------|------|
+| `database.type` | `sqlite` | 使用するデータベースの種類です。`sqlite` または `mysql` を指定します。 |
+| `database.sqlite.file` | `"moripa-utils.db"` | SQLite のデータベースファイルです。相対パスはプラグインのデータディレクトリを基準に解決されます。存在しないディレクトリは自動的に作成されます。 |
+| `database.mysql.host` | `localhost` | MySQL サーバーのホスト名またはアドレスです。 |
+| `database.mysql.port` | `3306` | MySQL サーバーのポートです。 |
+| `database.mysql.database` | `"moripa_utils"` | 使用するデータベース (スキーマ) の名前です。事前に作成しておく必要があります。 |
+| `database.mysql.user` | `root` | 接続に使用するユーザー名です。 |
+| `database.mysql.password` | `""` | 接続に使用するパスワードです。 |
+| `database.mysql.properties` | `{}` | JDBC の接続 URL に追加する接続プロパティです。 |
+
+`database.sqlite.file`、`database.mysql.host`、`database.mysql.database`、`database.mysql.user` を空にした場合や、`database.mysql.port` が `1` から `65535` の範囲外の場合は、設定ファイルの読み込み時にエラーになります。
+
+## MySQL を使用する
+
+MySQL を使用する場合は、事前にデータベースとユーザーを作成しておきます。
+
+```sql
+CREATE DATABASE moripa_utils CHARACTER SET utf8mb4;
+CREATE USER 'moripa'@'%' IDENTIFIED BY 'password';
+GRANT ALL PRIVILEGES ON moripa_utils.* TO 'moripa'@'%';
+```
+
+テーブルはプラグインが自動的に作成するため、ユーザーにはテーブルを作成する権限も必要です。
+`config.conf` には次のように記述します。
+
+```text
+database {
+    type = mysql
+    mysql {
+        host = "db.example.com"
+        database = "moripa_utils"
+        user = "moripa"
+        password = "password"
+        properties {
+            sslMode = DISABLED
+        }
+    }
+}
+```
+
+`properties` に記述した値は、`jdbc:mysql://host:port/database?sslMode=DISABLED` のように接続 URL のクエリとして追加されます。
+使用できるプロパティは [MySQL Connector/J のドキュメント](https://dev.mysql.com/doc/connector-j/en/connector-j-reference-configuration-properties.html) を参照してください。
+
+複数の Paper サーバーで同じ MySQL データベースを指定すると、データは同じテーブルに保存されます。
+チケットには送信元のサーバー (`config.conf` の `server`) が記録されるため、サーバーごとに区別できます。
+
+## テーブル
+
+各機能は、データベースに次のテーブルを作成します。
+テーブルは、その機能が初めてデータベースを使用したときに自動的に作成されます。
+
+| テーブル | 機能 | 説明 |
+|---------|------|------|
+| `tickets` | [Ticket](/docs/ticket) | 送信されたチケット |
+
+## 接続のタイミング
+
+データベースへの接続は、サーバーの起動時ではなく、最初にデータベースを使用したとき (例: 最初のチケットの送信時) に行われます。
+接続や読み書きはメインスレッド以外で行われるため、サーバーの動作を止めることはありません。
+データベースを使用する機能がすべて無効になっている場合は、接続は行われません。
+
+## 以前のバージョンからの移行
+
+v0.1.0 では、チケットを `ticket.database.file` に指定したファイル (既定では `tickets.db`) に保存していました。
+現在のバージョンでは、この設定は使用されず、`database` ブロックの設定が使用されます。
+古い `config.conf` に `ticket.database` が残っていても起動はできますが、その値は無視されます。
+
+既存のチケットを引き続き使用する場合は、次のように `database.sqlite.file` に以前のファイルを指定してください。
+テーブル名は以前と同じ `tickets` のため、そのまま読み込まれます。
+
+```text
+database {
+    sqlite {
+        file = "tickets.db"
+    }
+}
+```
+
+`tickets.db` が残っているにもかかわらず別のデータベースを使用する設定になっている場合は、起動時にサーバーのログに警告が出力されます。

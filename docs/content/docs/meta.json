@@ -3,6 +3,7 @@
         "---はじめに---",
         "index",
         "config",
+        "database",
         "---機能---",
         "observability",
         "ticket",

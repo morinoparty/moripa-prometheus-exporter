@@ -32,6 +32,20 @@ Paper で生成されるデフォルトの `config.conf` は以下のとおり�
 ```text
 # MoripaUtils configuration (HOCON)
 # https://utils.plugin.morino.party/docs/config
+database {
+    mysql {
+        database="moripa_utils"
+        host=localhost
+        password=""
+        port=3306
+        properties {}
+        user=root
+    }
+    sqlite {
+        file="moripa-utils.db"
+    }
+    type=sqlite
+}
 observability {
     enabled=true
     http {
@@ -48,21 +62,26 @@ server=main
 ticket {
     categories=[
         {
-            id=bug
-            name=バグの報告
-        },
-        {
             id=protect
             name=土地保護について
+        },
+        {
+            id=grief
+            name="荒らし、盗難について"
+        },
+        {
+            id=recovery
+            name="アイテム補填、データの復旧"
+        },
+        {
+            id=bug
+            name=バグの報告
         },
         {
             id=other
             name=その他
         }
     ]
-    database {
-        file="tickets.db"
-    }
     enabled=true
     webhook {
         url=""
@@ -71,7 +90,7 @@ ticket {
 ```
 
 Velocity では、`server` のデフォルト値が `proxy`、`observability.http.port` のデフォルト値が `9226` になります。
-チケット機能は Paper 専用のため、`ticket` ブロックは Velocity では使用されません (値の検証は行われます)。
+チケット機能とデータベースは Paper 専用のため、`ticket` ブロックと `database` ブロックは Velocity では使用されません (値の検証は行われます)。
 
 ## 共通の項目
 
@@ -80,6 +99,20 @@ Velocity では、`server` のデフォルト値が `proxy`、`observability.htt
 | `server` | `main` (Paper) / `proxy` (Velocity) | このサーバーを識別する名前です。複数のサーバーを運用している場合に、メトリクスのラベルやチケットの送信元としてサーバーを区別するために使用します。英数字、ハイフン (`-`)、アンダースコア (`_`) のみ使用できます。 |
 
 `server` の値は、Prometheus のメトリクス `minecraft_server_info` (Paper) と `velocity_proxy_info` (Velocity) の `server` ラベルとして公開されます。
+
+## database
+
+`database` ブロックでは、各機能がデータを保存するデータベース (SQLite / MySQL) を設定します。
+データベースはプラグイン全体で 1 つで、各機能はその中に機能ごとのテーブルを作成します。
+この設定は Paper でのみ使用されます。
+
+| キー | デフォルト | 説明 |
+|------|-----------|------|
+| `database.type` | `sqlite` | 使用するデータベースの種類です。`sqlite` または `mysql` を指定します。 |
+| `database.sqlite.file` | `"moripa-utils.db"` | SQLite のデータベースファイルです。プラグインのデータディレクトリからの相対パスで指定します。 |
+| `database.mysql.*` | - | MySQL の接続先 (`host` / `port` / `database` / `user` / `password` / `properties`) です。 |
+
+各項目の詳しい説明と MySQL の設定例は [データベース](/docs/database) を参照してください。
 
 ## observability
 
@@ -104,9 +137,10 @@ Velocity では、`server` のデフォルト値が `proxy`、`observability.htt
 | キー | デフォルト | 説明 |
 |------|-----------|------|
 | `ticket.enabled` | `true` | チケット機能を有効にするかどうかです。`false` にするとチケット機能は読み込まれません。 |
-| `ticket.categories` | `bug` / `protect` / `other` の 3 件 | プレイヤーが選択できるお問い合わせのカテゴリーです。記述した順に表示されます。 |
+| `ticket.categories` | 5 件 (下記参照) | プレイヤーが選択できるお問い合わせのカテゴリーです。記述した順に表示されます。 |
 | `ticket.webhook.url` | `""` | 新しいチケットを通知する Webhook の URL です。空文字の場合は通知を行いません。 |
-| `ticket.database.file` | `"tickets.db"` | チケットを保存する SQLite データベースのファイル名です。プラグインのデータディレクトリからの相対パスで指定します。 |
+
+チケットは `database` ブロックで設定したデータベースの `tickets` テーブルに保存されます。
 
 ### カテゴリー
 

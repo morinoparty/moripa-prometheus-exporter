@@ -7,7 +7,7 @@ description: /ticket コマンドで運営にお問い合わせを送信する�
 
 Ticket は、プレイヤーがゲーム内から運営へお問い合わせを送信するための機能です。
 プレイヤーが `/ticket` を実行するとお問い合わせ用の画面 (Dialog) が開き、カテゴリーを選んで内容を入力すると送信されます。
-送信されたお問い合わせは「チケット」としてサーバー上の SQLite データベースに保存され、運営に通知されます。
+送信されたお問い合わせは「チケット」としてデータベース (SQLite または MySQL) に保存され、運営に通知されます。
 
 <Callout type="info">
 この機能は Paper でのみ動作します。Velocity では `config.conf` の `ticket` ブロックは使用されません。
@@ -59,8 +59,9 @@ Discord Webhook には、チケット番号・カテゴリー・プレイヤー�
 
 ## データの保存先
 
-チケットは、プラグインのデータディレクトリにある SQLite データベース (既定では `plugins/MoripaUtils/tickets.db`) の `tickets` テーブルに保存されます。
-保存先のファイル名は `ticket.database.file` で変更できます。詳しくは [設定](/docs/ticket/config) を参照してください。
+チケットは、プラグイン全体で共有するデータベースの `tickets` テーブルに保存されます。
+デフォルトでは、プラグインのデータディレクトリにある SQLite データベース (`plugins/MoripaUtils/moripa-utils.db`) が使用されます。
+MySQL への切り替えや、以前のバージョンの `tickets.db` からの移行については [データベース](/docs/database) を参照してください。
 
 ## 関連ページ
 

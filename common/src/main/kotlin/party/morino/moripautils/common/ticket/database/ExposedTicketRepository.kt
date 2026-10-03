@@ -9,52 +9,44 @@
 
 package party.morino.moripautils.common.ticket.database
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import org.jetbrains.exposed.v1.core.DatabaseConfig
 import org.jetbrains.exposed.v1.core.ResultRow
 import org.jetbrains.exposed.v1.core.SortOrder
 import org.jetbrains.exposed.v1.core.eq
 import org.jetbrains.exposed.v1.core.greater
-import org.jetbrains.exposed.v1.jdbc.Database
+import org.jetbrains.exposed.v1.jdbc.JdbcTransaction
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.andWhere
 import org.jetbrains.exposed.v1.jdbc.insert
 import org.jetbrains.exposed.v1.jdbc.selectAll
-import org.jetbrains.exposed.v1.jdbc.transactions.TransactionManager
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import org.koin.core.component.inject
+import party.morino.moripautils.common.database.MoripaUtilsDatabase
+import party.morino.moripautils.common.di.MoripaUtilsKoinComponent
 import party.morino.moripautils.common.model.ticket.Ticket
 import party.morino.moripautils.common.model.ticket.TicketSearchQuery
 import party.morino.moripautils.common.model.ticket.TicketStatus
 import party.morino.moripautils.common.model.ticket.TicketSubmission
 import party.morino.moripautils.common.ticket.TicketRepository
-import java.nio.file.Files
-import java.nio.file.Path
-import java.sql.Connection
 import java.time.Instant
 import java.time.temporal.ChronoUnit
 import java.util.UUID
 
 /**
- * SQLite (Exposed) にチケットを保存するリポジトリ
+ * 共有データベース ([MoripaUtilsDatabase]) の tickets テーブルにチケットを保存するリポジトリ
  *
- * 接続とテーブル作成は最初の利用時に I/O スレッド上で行い、メインスレッドでのファイル I/O を避ける。
- * SQLite は同時書き込みに弱いため、すべての操作を並列度 1 のディスパッチャーで直列に実行する。
- *
- * @param databaseFile SQLite のデータベースファイル (親ディレクトリが無ければ作成する)
+ * Exposed の DSL だけを使うため、SQLite / MySQL のどちらでも同じように動く。
+ * tickets テーブルは最初の操作時に (無ければ) 作成する。
  */
-class SqliteTicketRepository(
-    private val databaseFile: Path,
-) : TicketRepository {
-    /** DB 操作専用のディスパッチャー (I/O スレッドを使いつつ、SQLite へのアクセスを 1 本に絞る) */
-    private val dispatcher = Dispatchers.IO.limitedParallelism(1)
+class ExposedTicketRepository :
+    TicketRepository,
+    MoripaUtilsKoinComponent {
+    private val database: MoripaUtilsDatabase by inject()
 
-    /** 接続済みのデータベース (初回アクセス時に接続とテーブル作成を行う) */
-    private val databaseDelegate = lazy { connect() }
-    private val database: Database by databaseDelegate
+    /** tickets テーブルを作成済みかどうか (複数スレッドから読まれるため volatile にする) */
+    @Volatile
+    private var schemaReady = false
 
     override suspend fun create(submission: TicketSubmission): Ticket = dbQuery {
-        // SQLite の timestamp はミリ秒精度で保存されるため、戻り値と DB の値がずれないよう先に丸める
+        // DB によって timestamp の精度が異なるため、戻り値と DB の値がずれないようミリ秒に丸めておく
         val createdAt = Instant.now().truncatedTo(ChronoUnit.MILLIS)
         val id = TicketsTable.insert {
             it[serverId] = submission.serverId
@@ -98,44 +90,21 @@ class SqliteTicketRepository(
             .map { it.toTicket() }
     }
 
-    override fun close() {
-        // 一度も使われていなければ接続も存在しないので何もしない
-        if (databaseDelegate.isInitialized()) {
-            TransactionManager.closeAndUnregister(database)
-        }
-    }
-
     /**
-     * データベースに接続し、テーブルが無ければ作成する
+     * tickets テーブルを用意してからトランザクションを実行する
      *
-     * @return 接続済みのデータベース
-     */
-    private fun connect(): Database {
-        // tickets.db をサブディレクトリに置く設定にも対応する
-        databaseFile.toAbsolutePath().parent?.let { Files.createDirectories(it) }
-        val db = Database.connect(
-            url = "jdbc:sqlite:${databaseFile.toAbsolutePath()}",
-            driver = "org.sqlite.JDBC",
-            // SQLite は Exposed 既定の分離レベルに対応していないため SERIALIZABLE を指定する
-            databaseConfig = DatabaseConfig { defaultIsolationLevel = Connection.TRANSACTION_SERIALIZABLE },
-        )
-        transaction(db) {
-            SchemaUtils.create(TicketsTable)
-        }
-        return db
-    }
-
-    /**
-     * DB 専用のディスパッチャー上でトランザクションを実行する
-     *
-     * 他のプラグインの Exposed 設定に影響されないよう、必ずこのリポジトリの [database] を明示して使う。
+     * テーブル作成は CREATE TABLE IF NOT EXISTS 相当なので、並行して初回の操作が走っても問題ない。
      *
      * @param T 処理の戻り値の型
      * @param block トランザクション内で実行する処理
      * @return 処理の結果
      */
-    private suspend fun <T> dbQuery(block: () -> T): T = withContext(dispatcher) {
-        transaction(database) { block() }
+    private suspend fun <T> dbQuery(block: JdbcTransaction.() -> T): T = database.query {
+        if (!schemaReady) {
+            SchemaUtils.create(TicketsTable)
+            schemaReady = true
+        }
+        block()
     }
 
     /**

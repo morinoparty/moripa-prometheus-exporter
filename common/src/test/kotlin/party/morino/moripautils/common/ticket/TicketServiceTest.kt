@@ -124,8 +124,6 @@ class TicketServiceTest {
         override suspend fun findById(id: Long): Ticket? = null
 
         override suspend fun search(query: TicketSearchQuery): List<Ticket> = emptyList()
-
-        override fun close() = Unit
     }
 
     /** 通知の呼び出しを記録するだけの通知先 */

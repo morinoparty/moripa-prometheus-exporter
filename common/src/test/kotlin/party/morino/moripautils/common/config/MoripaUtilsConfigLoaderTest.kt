@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import party.morino.moripautils.common.model.config.DatabaseType
 import party.morino.moripautils.common.model.config.HttpServerConfig
 import party.morino.moripautils.common.model.config.MoripaUtilsConfig
 import party.morino.moripautils.common.model.config.ObservabilityConfig
@@ -83,7 +84,50 @@ class MoripaUtilsConfigLoaderTest {
         assertEquals(20L, loaded.observability.metrics.samplingIntervalTicks)
         assertEquals(listOf(TicketCategory("report", "通報")), loaded.ticket.categories)
         assertEquals("https://example.com/hook", loaded.ticket.webhook.url)
-        assertEquals("tickets.db", loaded.ticket.database.file)
+        assertEquals(DatabaseType.SQLITE, loaded.database.type)
+        assertEquals("moripa-utils.db", loaded.database.sqlite.file)
+    }
+
+    @Test
+    @DisplayName("Parses MySQL database settings")
+    fun parsesMysqlDatabase() {
+        val loader = loaderWith(
+            """
+            database {
+              type = mysql
+              mysql {
+                host = db.example.com
+                user = moripa
+                password = secret
+                properties { sslMode = DISABLED }
+              }
+            }
+            """.trimIndent(),
+        )
+
+        val database = loader.load().database
+
+        // 小文字の type が enum に対応し、省略したポートなどは既定値になる
+        assertEquals(DatabaseType.MYSQL, database.type)
+        assertEquals("db.example.com", database.mysql.host)
+        assertEquals(3306, database.mysql.port)
+        assertEquals("moripa", database.mysql.user)
+        assertEquals(mapOf("sslMode" to "DISABLED"), database.mysql.properties)
+    }
+
+    @Test
+    @DisplayName("Loads a v0.1.0 config that still has ticket.database")
+    fun loadsLegacyTicketDatabase() {
+        // v0.1.0 では ticket.database.file にチケットの保存先を書いていた。古いキーが残っていても起動できる
+        val loader = loaderWith(
+            """
+            ticket {
+              database { file = "tickets.db" }
+            }
+            """.trimIndent(),
+        )
+
+        assertEquals(DatabaseType.SQLITE, loader.load().database.type)
     }
 
     @Test

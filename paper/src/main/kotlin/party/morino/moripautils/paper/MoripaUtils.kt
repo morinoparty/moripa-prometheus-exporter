@@ -17,18 +17,21 @@ import org.incendo.cloud.paper.PaperCommandManager
 import org.koin.core.component.get
 import party.morino.moripautils.common.MoripaUtilsCommon
 import party.morino.moripautils.common.config.MoripaUtilsConfigLoader
+import party.morino.moripautils.common.database.JdbcUrlBuilder
+import party.morino.moripautils.common.database.MoripaUtilsDatabase
+import party.morino.moripautils.common.database.di.DatabaseModule
 import party.morino.moripautils.common.di.CommonModule
 import party.morino.moripautils.common.di.MoripaUtilsKoinComponent
 import party.morino.moripautils.common.di.MoripaUtilsKoinContext
+import party.morino.moripautils.common.model.config.DatabaseConfig
+import party.morino.moripautils.common.model.config.DatabaseType
 import party.morino.moripautils.common.model.config.MoripaUtilsConfig
 import party.morino.moripautils.common.model.config.ObservabilityConfig
-import party.morino.moripautils.common.model.config.TicketConfig
 import party.morino.moripautils.common.observability.http.MetricsHttpServer
 import party.morino.moripautils.common.observability.metrics.JvmMetricsCollector
 import party.morino.moripautils.common.observability.metrics.MetricsCollector
 import party.morino.moripautils.common.observability.metrics.MetricsExporter
 import party.morino.moripautils.common.observability.metrics.SampledMetricsCollector
-import party.morino.moripautils.common.ticket.TicketRepository
 import party.morino.moripautils.common.ticket.TicketService
 import party.morino.moripautils.common.ticket.di.TicketModule
 import party.morino.moripautils.paper.di.PaperModule
@@ -43,6 +46,7 @@ import party.morino.moripautils.paper.observability.metrics.WorldMetricsCollecto
 import party.morino.moripautils.paper.ticket.di.PaperTicketModule
 import party.morino.moripautils.paper.ticket.mineauth.TicketMineAuthIntegration
 import java.io.IOException
+import java.nio.file.Files
 
 /**
  * MoripaUtils の Paper 向けプラグイン本体
@@ -72,7 +76,7 @@ open class MoripaUtils(
             logger.info("Observability is disabled in config.conf")
         }
         if (config.ticket.enabled) {
-            startTicket(config.ticket)
+            startTicket(config.database)
         } else {
             logger.info("Ticket is disabled in config.conf")
         }
@@ -85,9 +89,9 @@ open class MoripaUtils(
         MoripaUtilsKoinContext.getOrNull()?.let { koin ->
             koin.getOrNull<MetricsSampler>()?.stop()
             koin.getOrNull<MetricsExporter>()?.stop()
-            // ticket 機能が無効な場合はリポジトリが定義されていない
+            // ticket 機能が無効な場合はサービスもデータベースも定義されていない
             koin.getOrNull<TicketService>()?.close()
-            koin.getOrNull<TicketRepository>()?.close()
+            koin.getOrNull<MoripaUtilsDatabase>()?.close()
         }
         // 専用コンテナを閉じる (他プラグインの Koin には影響しない)
         MoripaUtilsKoinContext.stop()
@@ -132,14 +136,16 @@ open class MoripaUtils(
      *
      * /ticket コマンド自体はブートストラップ段階で登録済み ([MoripaUtilsBootstrap])。ここではコマンドが使う
      * サービスなどを Koin に読み込み、MineAuth があれば HTTP API を登録する。
-     * データベースへの接続は最初のチケット操作時に I/O スレッドで行う。
+     * チケットは共有データベースの tickets テーブルに保存し、接続は最初のチケット操作時に I/O スレッドで行う。
      *
-     * @param config ticket 機能の設定
+     * @param databaseConfig 共有データベースの設定
      */
-    private fun startTicket(config: TicketConfig) {
+    private fun startTicket(databaseConfig: DatabaseConfig) {
+        warnIfLegacyTicketDatabaseIsLeft(databaseConfig)
         MoripaUtilsKoinContext.loadModules(
             listOf(
-                TicketModule.create(dataFolder.toPath(), config, logger),
+                DatabaseModule.create(dataFolder.toPath(), databaseConfig),
+                TicketModule.create(logger),
                 PaperTicketModule.create(),
             ),
         )
@@ -148,6 +154,29 @@ open class MoripaUtils(
             registerMineAuthSafely()
         } else {
             logger.info("MineAuth is not installed; ticket HTTP endpoints are disabled")
+        }
+    }
+
+    /**
+     * v0.1.0 の tickets.db が残っているのに、別のデータベースを使う設定になっている場合に警告する
+     *
+     * v0.1.0 ではチケットを ticket.database.file (既定は tickets.db) に保存していた。
+     * 共有データベース (database ブロック) へ移行した後も古いファイルを使い続けたい場合は、
+     * database.sqlite.file に tickets.db を指定する必要があるため、気付けるようにログで案内する。
+     *
+     * @param config 共有データベースの設定
+     */
+    private fun warnIfLegacyTicketDatabaseIsLeft(config: DatabaseConfig) {
+        val legacyFile = dataFolder.toPath().resolve(LEGACY_TICKET_DATABASE_FILE).toAbsolutePath()
+        if (Files.notExists(legacyFile)) return
+        // SQLite で同じファイルを指定していれば、そのまま引き継がれているので警告しない
+        val usesLegacyFile = config.type == DatabaseType.SQLITE &&
+            JdbcUrlBuilder.sqliteFile(config, dataFolder.toPath()) == legacyFile
+        if (!usesLegacyFile) {
+            logger.warning(
+                "Found $LEGACY_TICKET_DATABASE_FILE from an older version, but it is not used. " +
+                    "Set database.sqlite.file = \"$LEGACY_TICKET_DATABASE_FILE\" in config.conf to keep using existing tickets.",
+            )
         }
     }
 
@@ -237,5 +266,8 @@ open class MoripaUtils(
     companion object {
         /** 連携する MineAuth のプラグイン名 */
         private const val MINEAUTH_PLUGIN_NAME = "MineAuth"
+
+        /** v0.1.0 がチケットを保存していた SQLite ファイルの既定名 */
+        private const val LEGACY_TICKET_DATABASE_FILE = "tickets.db"
     }
 }

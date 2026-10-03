@@ -12,35 +12,50 @@ package party.morino.moripautils.common.ticket
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertTrue
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.koin.dsl.module
+import party.morino.moripautils.common.database.MoripaUtilsDatabase
+import party.morino.moripautils.common.di.MoripaUtilsKoinContext
+import party.morino.moripautils.common.model.config.DatabaseConfig
+import party.morino.moripautils.common.model.config.SqliteConfig
 import party.morino.moripautils.common.model.ticket.TicketSearchQuery
 import party.morino.moripautils.common.model.ticket.TicketStatus
 import party.morino.moripautils.common.model.ticket.TicketSubmission
-import party.morino.moripautils.common.ticket.database.SqliteTicketRepository
+import party.morino.moripautils.common.ticket.database.ExposedTicketRepository
+import java.nio.file.Files
 import java.nio.file.Path
 import java.util.UUID
 
 /**
- * [SqliteTicketRepository] を一時ディレクトリの SQLite ファイルで動かすテスト
+ * [ExposedTicketRepository] を一時ディレクトリの SQLite ファイル (共有データベース) で動かすテスト
  */
-class SqliteTicketRepositoryTest {
+class ExposedTicketRepositoryTest {
     @TempDir
     lateinit var tempDir: Path
 
-    private lateinit var repository: SqliteTicketRepository
+    private lateinit var database: MoripaUtilsDatabase
+
+    @BeforeEach
+    fun setUp() {
+        // サブディレクトリが無くても作成されることも合わせて確認する
+        database = MoripaUtilsDatabase(DatabaseConfig(sqlite = SqliteConfig(file = "data/moripa-utils.db")), tempDir)
+        MoripaUtilsKoinContext.start(listOf(module { single { database } }))
+    }
 
     @AfterEach
     fun tearDown() {
-        repository.close()
+        database.close()
+        MoripaUtilsKoinContext.stop()
     }
 
     @Test
     @DisplayName("Creates tickets and pages through them with filters")
     fun createAndSearch() = runBlocking {
-        // サブディレクトリが無くても作成されることも合わせて確認する
-        repository = SqliteTicketRepository(tempDir.resolve("data/tickets.db"))
+        val repository = ExposedTicketRepository()
         val alice = UUID.randomUUID()
         val bob = UUID.randomUUID()
 
@@ -57,5 +72,7 @@ class SqliteTicketRepositoryTest {
         // カテゴリー / 送信者で絞り込める
         assertEquals(listOf(first, third), repository.search(TicketSearchQuery(categoryId = "bug", limit = 10)))
         assertEquals(listOf(second), repository.search(TicketSearchQuery(playerUuid = bob, limit = 10)))
+        // 設定したファイルに tickets テーブルが作られている
+        assertTrue(Files.exists(tempDir.resolve("data/moripa-utils.db")))
     }
 }
