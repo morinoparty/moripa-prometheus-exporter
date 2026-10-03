@@ -1,6 +1,6 @@
 # moripa-utils
 
-morinoparty の Minecraft サーバー向けユーティリティプラグイン「MoripaUtils」です (旧名: MoripaPrometheusExporter)。
+morinoparty の Minecraft サーバー向けユーティリティプラグイン「MoripaUtils」です。
 運営に必要な機能を機能 (feature) 単位でまとめて提供します。
 Paper / Velocity 両対応のマルチモジュール構成になっています。
 
