@@ -34,11 +34,7 @@ data class TicketConfig(
     }
 
     companion object {
-        /**
-         * 既定のカテゴリー一覧 (この順に表示し、先頭を初期選択にする)
-         *
-         * id は保存済みのチケットと紐付くため、既存の bug / protect / other は変更しないこと
-         */
+        /** 既定のカテゴリー一覧 (この順に表示し、先頭を初期選択にする) */
         val DEFAULT_CATEGORIES: List<TicketCategory> = listOf(
             TicketCategory(id = "protect", name = "土地保護について"),
             TicketCategory(id = "grief", name = "荒らし、盗難について"),

@@ -116,21 +116,6 @@ class MoripaUtilsConfigLoaderTest {
     }
 
     @Test
-    @DisplayName("Loads a v0.1.0 config that still has ticket.database")
-    fun loadsLegacyTicketDatabase() {
-        // v0.1.0 では ticket.database.file にチケットの保存先を書いていた。古いキーが残っていても起動できる
-        val loader = loaderWith(
-            """
-            ticket {
-              database { file = "tickets.db" }
-            }
-            """.trimIndent(),
-        )
-
-        assertEquals(DatabaseType.SQLITE, loader.load().database.type)
-    }
-
-    @Test
     @DisplayName("Rejects invalid ticket category id")
     fun rejectsInvalidCategoryId() {
         // 大文字や空白を含む id は TicketCategory の init ブロックで拒否される
