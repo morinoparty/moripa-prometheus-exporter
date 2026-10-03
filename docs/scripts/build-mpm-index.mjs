@@ -5,14 +5,14 @@
  * 1枚のバンドルに束ね、`docs/public/mpm/paper/index.json`（生成物・gitignore）として書き出す。
  *
  * このサイト（utils.plugin.morino.party）は mpm リポジトリグラフにおける morinoparty のノードである。
- * 中央リポジトリ（repo.mpm.nikomaru.dev）の children.json がこのファイルのURLを指しており、
- * mpm（クライアント）は中央の index.json からリンクをたどってここを読み、さらに children をたどって
- * MineAuth や MoripaFishing などの子リポジトリを読む。
+ * 中央リポジトリ（repo.mpm.nikomaru.dev）からは参照されておらず、利用者が config.json にリモートソースとして追加する。
+ * mpm（クライアント）はここを起点に children をたどって MineAuth や MoripaFishing などの子リポジトリを読む。
+ * mpm 自身の定義は中央リポジトリが持つため、ここには置かない。
  *
  * morinoparty のプラグインを追加するときは docs/mpm/plugins/ に JSON を1つ足すだけでよい。
  * 子リポジトリを追加するときは docs/mpm/children.json にリンクを1件足す。
  *
- * 定義はもともと中央リポジトリの repo/public/paper/plugins/ にあったものを引き継いでいるため、
+ * 定義は中央リポジトリの repo/public/paper/plugins/ と同じ形式のため、
  * 変換は中央の repo/scripts/build.ts と同じく `$schema` を落とすだけに留める
  * （downloadUrl / fileNameTemplate などのフィールドは削らない）。
  *
