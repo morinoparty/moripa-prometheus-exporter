@@ -210,9 +210,67 @@ jobs:
             ./artifacts/jars/*.jar)
           echo "release_url=https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME" >> $GITHUB_OUTPUT
 
+  # in-game テスト: fukurou で実際の Paper サーバーとクライアントを動かす
+  # 対象バージョンを解決する (paper-plugin.yml の apiVersion が 26.2 のため 26.2 以降。27.x が出たら上限を指定して 26.x に絞る)
+  game-test-versions:
+    needs: setup
+    runs-on: ubuntu-24.04
+    outputs:
+      matrix: ${{ steps.versions.outputs.matrix }}
+    steps:
+      - uses: morinoparty/fukurou/versions@d2834e454bd6541db83bb646465f3ef565b0675c # v2.2.1
+        id: versions
+        with:
+          minecraft-version: 26.2-
+
+  # build-gradle が作った JAR を使い、game-test/ のシナリオを実行する (Gradle のビルドをやり直さない)
+  game-test:
+    name: In-game test (Minecraft ${{ matrix.minecraft-version }})
+    needs: [build-gradle, game-test-versions]
+    runs-on: ubuntu-24.04
+    # 10 + N_reset x 1 分 (fukurou の docs/usage.md の "Estimating timeout-minutes" を参照)
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        minecraft-version: ${{ fromJSON(needs.game-test-versions.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Download JAR artifacts
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: gradle-artifacts
+          path: ./artifacts
+
+      # Velocity / API の JAR は Paper に入れない
+      - uses: morinoparty/fukurou@d2834e454bd6541db83bb646465f3ef565b0675c # v2.2.1
+        with:
+          accept-eula: "true" # Minecraft EULA に同意する: https://aka.ms/MinecraftEULA
+          minecraft-version: ${{ matrix.minecraft-version }}
+          suite: game-test/fukurou.yml
+          plugins-dir: artifacts/jars
+          plugins: "${{ env.PROJECT_NAME }}-paper-*.jar"
+
+  # 全バージョンの結果を 1 つのビューアーにまとめる (S3 へのアップロードは upload-s3 ジョブで行う)
+  game-test-site:
+    needs: [build-gradle, game-test]
+    # テストが失敗してもレポートは作る
+    if: ${{ !cancelled() && needs.build-gradle.result == 'success' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: morinoparty/fukurou/ui@d2834e454bd6541db83bb646465f3ef565b0675c # v2.2.1
+        with:
+          upload: "false"
+          retention-days: "1"
+
   # S3 アップロードジョブ（Docs とレポートのみ）
   upload-s3:
-    needs: [setup, build-gradle, build-docs]
+    needs: [setup, build-gradle, build-docs, game-test-site]
+    # in-game テストが失敗しても、ほかのレポートはアップロードする
+    if: ${{ !cancelled() && needs.build-gradle.result == 'success' && needs.build-docs.result == 'success' }}
     runs-on: ubuntu-latest
     env:
       COMMIT_SHORT_SHA: ${{ needs.setup.outputs.commit_sha }}
@@ -229,6 +287,7 @@ jobs:
           cp -r ./artifacts/gradle-artifacts/detekt ./upload/ || echo "No Detekt reports"
           mkdir -p ./upload/docs
           mv ./artifacts/docs-artifacts/* ./upload/docs/
+          cp -r ./artifacts/fukurou-site ./upload/fukurou || echo "No in-game test report"
 
       - name: Upload to S3 (parallel)
         run: |
@@ -242,6 +301,9 @@ jobs:
           aws s3 cp ./upload/junit $S3_BASE/junit $S3_OPTS --recursive &
           aws s3 cp ./upload/detekt $S3_BASE/detekt $S3_OPTS --recursive &
           aws s3 cp ./upload/docs $S3_BASE/docs $S3_OPTS --recursive &
+          if [ -d ./upload/fukurou ]; then
+            aws s3 cp ./upload/fukurou $S3_BASE/fukurou $S3_OPTS --recursive &
+          fi
 
           # 全ての並列アップロードを待機
           wait
@@ -293,6 +355,7 @@ jobs:
           RELEASE_URL: "${{ needs.upload-release.outputs.release_url }}"
           RELEASE_DOWNLOAD_BASE: "https://github.com/${{ github.repository }}/releases/download/preview-pr${{ github.event.pull_request.number }}-${{ env.COMMIT_SHORT_SHA }}"
           JUNIT_REPORT_URL: "${{ env.PREVIEW_BASE_URL }}/${{ env.PROJECT_NAME }}/${{ env.COMMIT_SHORT_SHA }}/junit/index.html"
+          GAME_TEST_REPORT_URL: "${{ env.PREVIEW_BASE_URL }}/${{ env.PROJECT_NAME }}/${{ env.COMMIT_SHORT_SHA }}/fukurou/index.html"
           DETEKT_REPORT_URL: "${{ env.PREVIEW_BASE_URL }}/${{ env.PROJECT_NAME }}/${{ env.COMMIT_SHORT_SHA }}/detekt/detekt.html"
           DOCS_PREVIEW_URL: "${{ env.PREVIEW_BASE_URL }}/${{ env.PROJECT_NAME }}/${{ env.COMMIT_SHORT_SHA }}/docs/index.html"
           DOKKA_URL: "${{ env.PREVIEW_BASE_URL }}/${{ env.PROJECT_NAME }}/${{ env.COMMIT_SHORT_SHA }}/docs/dokka/index.html"
@@ -317,6 +380,7 @@ jobs:
           | 📖 Documentation | [Preview]($DOCS_PREVIEW_URL) |
           | 📖 Dokka API | [Preview]($DOKKA_URL) |
           | 🧪 JUnit Report | [Report]($JUNIT_REPORT_URL) |
+          | 🎮 In-game Test | [Report]($GAME_TEST_REPORT_URL) |
           | 🔍 Detekt Report | [Report]($DETEKT_REPORT_URL) |
 
           ### 🧪 Test Summary

@@ -14,10 +14,9 @@ import kotlinx.serialization.Serializable
 /**
  * お問い合わせ (ticket 機能) の設定
  *
- * @property enabled ticket 機能を有効にするかどうか。false の場合は /ticket コマンドやデータベースを用意しない
+ * @property enabled ticket 機能を有効にするかどうか。false の場合は /ticket コマンドや tickets テーブルを用意しない
  * @property categories プレイヤーが選択できるお問い合わせのカテゴリー (表示順)
  * @property webhook 新しいチケットを外部へ通知する Webhook の設定
- * @property database チケットを保存するデータベースの設定
  * @throws IllegalArgumentException categories が空、または id が重複している場合
  */
 @Serializable
@@ -25,7 +24,6 @@ data class TicketConfig(
     val enabled: Boolean = true,
     val categories: List<TicketCategory> = DEFAULT_CATEGORIES,
     val webhook: TicketWebhookConfig = TicketWebhookConfig(),
-    val database: TicketDatabaseConfig = TicketDatabaseConfig(),
 ) {
     init {
         // カテゴリーが 1 つもないとプレイヤーが送信できないため、設定の読み込み時に失敗させる
@@ -36,10 +34,12 @@ data class TicketConfig(
     }
 
     companion object {
-        /** 既定のカテゴリー一覧 */
+        /** 既定のカテゴリー一覧 (この順に表示し、先頭を初期選択にする) */
         val DEFAULT_CATEGORIES: List<TicketCategory> = listOf(
-            TicketCategory(id = "bug", name = "バグの報告"),
             TicketCategory(id = "protect", name = "土地保護について"),
+            TicketCategory(id = "grief", name = "荒らし、盗難について"),
+            TicketCategory(id = "recovery", name = "アイテム補填、データの復旧"),
+            TicketCategory(id = "bug", name = "バグの報告"),
             TicketCategory(id = "other", name = "その他"),
         )
     }

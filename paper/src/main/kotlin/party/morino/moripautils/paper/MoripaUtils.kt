@@ -17,18 +17,19 @@ import org.incendo.cloud.paper.PaperCommandManager
 import org.koin.core.component.get
 import party.morino.moripautils.common.MoripaUtilsCommon
 import party.morino.moripautils.common.config.MoripaUtilsConfigLoader
+import party.morino.moripautils.common.database.MoripaUtilsDatabase
+import party.morino.moripautils.common.database.di.DatabaseModule
 import party.morino.moripautils.common.di.CommonModule
 import party.morino.moripautils.common.di.MoripaUtilsKoinComponent
 import party.morino.moripautils.common.di.MoripaUtilsKoinContext
+import party.morino.moripautils.common.model.config.DatabaseConfig
 import party.morino.moripautils.common.model.config.MoripaUtilsConfig
 import party.morino.moripautils.common.model.config.ObservabilityConfig
-import party.morino.moripautils.common.model.config.TicketConfig
 import party.morino.moripautils.common.observability.http.MetricsHttpServer
 import party.morino.moripautils.common.observability.metrics.JvmMetricsCollector
 import party.morino.moripautils.common.observability.metrics.MetricsCollector
 import party.morino.moripautils.common.observability.metrics.MetricsExporter
 import party.morino.moripautils.common.observability.metrics.SampledMetricsCollector
-import party.morino.moripautils.common.ticket.TicketRepository
 import party.morino.moripautils.common.ticket.TicketService
 import party.morino.moripautils.common.ticket.di.TicketModule
 import party.morino.moripautils.paper.di.PaperModule
@@ -72,7 +73,7 @@ open class MoripaUtils(
             logger.info("Observability is disabled in config.conf")
         }
         if (config.ticket.enabled) {
-            startTicket(config.ticket)
+            startTicket(config.database)
         } else {
             logger.info("Ticket is disabled in config.conf")
         }
@@ -85,9 +86,9 @@ open class MoripaUtils(
         MoripaUtilsKoinContext.getOrNull()?.let { koin ->
             koin.getOrNull<MetricsSampler>()?.stop()
             koin.getOrNull<MetricsExporter>()?.stop()
-            // ticket 機能が無効な場合はリポジトリが定義されていない
+            // ticket 機能が無効な場合はサービスもデータベースも定義されていない
             koin.getOrNull<TicketService>()?.close()
-            koin.getOrNull<TicketRepository>()?.close()
+            koin.getOrNull<MoripaUtilsDatabase>()?.close()
         }
         // 専用コンテナを閉じる (他プラグインの Koin には影響しない)
         MoripaUtilsKoinContext.stop()
@@ -132,14 +133,15 @@ open class MoripaUtils(
      *
      * /ticket コマンド自体はブートストラップ段階で登録済み ([MoripaUtilsBootstrap])。ここではコマンドが使う
      * サービスなどを Koin に読み込み、MineAuth があれば HTTP API を登録する。
-     * データベースへの接続は最初のチケット操作時に I/O スレッドで行う。
+     * チケットは共有データベースの tickets テーブルに保存し、接続は最初のチケット操作時に I/O スレッドで行う。
      *
-     * @param config ticket 機能の設定
+     * @param databaseConfig 共有データベースの設定
      */
-    private fun startTicket(config: TicketConfig) {
+    private fun startTicket(databaseConfig: DatabaseConfig) {
         MoripaUtilsKoinContext.loadModules(
             listOf(
-                TicketModule.create(dataFolder.toPath(), config, logger),
+                DatabaseModule.create(dataFolder.toPath(), databaseConfig),
+                TicketModule.create(logger),
                 PaperTicketModule.create(),
             ),
         )

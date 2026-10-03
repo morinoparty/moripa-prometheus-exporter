@@ -1,0 +1,56 @@
+---
+title: In-game テスト
+description: fukurou を使って実際の Paper サーバーとクライアントでプラグインを動かすテスト
+---
+
+# In-game テスト (fukurou)
+
+このリポジトリでは、[fukurou](https://github.com/morinoparty/fukurou) を使って、実際の Paper サーバーとバニラクライアントでプラグインを動かすテストを GitHub Actions 上で実行します。
+テストはプレビュー用のワークフロー `.github/workflows/preview.yml` の中で、プルリクエストごとに実行されます。
+`build-gradle` ジョブが作成した Paper 用の JAR をそのまま使うため、テストのために Gradle のビルドをやり直すことはありません。
+
+## 構成
+
+| ファイル | 役割 |
+|---------|------|
+| `.github/workflows/preview.yml` | `game-test` ジョブで fukurou を実行し、`game-test-site` ジョブで結果のビューアーを作成する |
+| `game-test/fukurou.yml` | テストスイート。シナリオの場所と参加するプレイヤーを定義する |
+| `game-test/scenarios/*.yml` | 1 ファイルが 1 テスト。ファイル名がテスト id になる |
+
+テストに参加するプレイヤーは `Alice` です。
+一般のプレイヤーと同じ権限で動作を確認するため、OP にはしていません。
+
+## 対象バージョン
+
+`paper-plugin.yml` の `apiVersion` が `26.2` のため、テスト対象は 26.2 以降のバージョンです。
+バージョンは `morinoparty/fukurou/versions` アクションで解決し、バージョンごとにマトリクスジョブとして実行します。
+
+## シナリオ
+
+| テスト id | 内容 |
+|----------|------|
+| `ticket-dialog-opens` | `/ticket` を実行し、お問い合わせ用の Dialog が開けることを確認する |
+
+`ticket-dialog-opens` では、次の順に確認します。
+
+1. プレイヤーが `/ticket` を実行し、サーバーのログにコマンドの実行が記録されるまで待ちます。
+2. サーバーのログに、コマンドの実行時の例外や MoripaUtils のコードを含むスタックトレースが出ていないことを確認します。
+3. クライアントのチャットに、コマンドが存在しない旨や「現在お問い合わせを受け付けていません」といったメッセージが表示されていないことを確認します。
+4. Dialog が表示された状態のスクリーンショットを撮影し、Escape キーで閉じます。
+
+fukurou には Dialog の表示を直接検証する手段がないため、Dialog の内容はスクリーンショットで目視して確認します。
+このテストではチケットを送信しないため、データベースには接続しません。
+
+## 結果の確認
+
+全バージョンの結果は 1 つのビューアーにまとめられ、プレビューのコメントの「🎮 In-game Test」から開けます。
+ビューアーでは、各テストの結果、スクリーンショット、サーバーとクライアントのログを確認できます。
+また、`result.json` を含む生の結果は `fukurou-paper-<バージョン>` という名前のアーティファクトとしてもアップロードされ、各テストの結果はジョブのサマリーにも表示されます。
+
+## ローカルでの検証
+
+シナリオの書式は、次のコマンドでサーバーを起動せずに検証できます。
+
+```bash
+uvx --from git+https://github.com/morinoparty/fukurou fukurou validate --suite game-test/fukurou.yml
+```

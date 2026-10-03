@@ -1,0 +1,11 @@
+$schema: https://raw.githubusercontent.com/morinoparty/fukurou/v2/schema/suite.v1.json
+# MoripaUtils の in-game テスト。docs: https://github.com/morinoparty/fukurou/blob/main/docs/usage.md
+#
+# CI では preview.yml の game-test ジョブが、build-gradle の作った Paper 用 JAR を使って実行する。
+# ローカルでシナリオの書式だけを確かめる場合:
+#   uvx --from git+https://github.com/morinoparty/fukurou fukurou validate --suite game-test/fukurou.yml
+scenarios:
+  - scenarios/*.yml
+players:
+  # /ticket は全員に許可された権限 (moripautils.ticket.use) で動くため、OP にしない
+  - { name: Alice }

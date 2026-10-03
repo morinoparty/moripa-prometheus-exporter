@@ -6,23 +6,27 @@
  * You should have received a copy of the CC0 Public Domain Dedication along with this software.
  * If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
-
 package party.morino.moripautils.common.model.config
 
 import kotlinx.serialization.Serializable
 
 /**
- * チケットを保存するデータベースの設定
+ * SQLite の接続設定 (database.type = sqlite のときに使う)
  *
- * @property file SQLite のデータベースファイル名 (プラグインのデータフォルダからの相対パス)
+ * @property file データベースファイル名 (プラグインのデータフォルダからの相対パス。絶対パスも指定できる)
  * @throws IllegalArgumentException file が空の場合
  */
 @Serializable
-data class TicketDatabaseConfig(
-    val file: String = "tickets.db",
+data class SqliteConfig(
+    val file: String = DEFAULT_FILE,
 ) {
     init {
         // 空文字だとデータフォルダ自体を開こうとしてしまうため弾く
-        require(file.isNotBlank()) { "ticket.database.file must not be blank" }
+        require(file.isNotBlank()) { "database.sqlite.file must not be blank" }
+    }
+
+    companion object {
+        /** file の既定値 */
+        const val DEFAULT_FILE: String = "moripa-utils.db"
     }
 }

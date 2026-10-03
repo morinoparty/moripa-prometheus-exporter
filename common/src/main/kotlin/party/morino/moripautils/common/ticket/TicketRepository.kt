@@ -18,7 +18,7 @@ import party.morino.moripautils.common.model.ticket.TicketSubmission
  *
  * 実装はデータベースへの I/O をメインスレッド以外で行うこと (呼び出し側はどのスレッドからでも呼べる)。
  */
-interface TicketRepository : AutoCloseable {
+interface TicketRepository {
     /**
      * 新しいチケットを保存する
      *
@@ -42,9 +42,4 @@ interface TicketRepository : AutoCloseable {
      * @return 最大 [TicketSearchQuery.limit] 件のチケット
      */
     suspend fun search(query: TicketSearchQuery): List<Ticket>
-
-    /**
-     * 接続などのリソースを解放する (プラグインの無効化時に呼ぶ)
-     */
-    override fun close()
 }

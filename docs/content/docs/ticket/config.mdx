@@ -15,21 +15,26 @@ description: チケット機能の設定項目 (config.conf の ticket ブロッ
 ticket {
     categories=[
         {
-            id=bug
-            name=バグの報告
-        },
-        {
             id=protect
             name=土地保護について
+        },
+        {
+            id=grief
+            name="荒らし、盗難について"
+        },
+        {
+            id=recovery
+            name="アイテム補填、データの復旧"
+        },
+        {
+            id=bug
+            name=バグの報告
         },
         {
             id=other
             name=その他
         }
     ]
-    database {
-        file="tickets.db"
-    }
     enabled=true
     webhook {
         url=""
@@ -41,12 +46,24 @@ ticket {
 
 | キー | デフォルト | 説明 |
 |------|-----------|------|
-| `ticket.enabled` | `true` | チケット機能を有効にするかどうかです。`false` にすると `/ticket` コマンド、データベース、MineAuth の HTTP API はいずれも登録されません。 |
-| `ticket.categories` | `bug` / `protect` / `other` の 3 件 | Dialog に表示するカテゴリーです。記述した順に表示され、先頭のカテゴリーが初期選択になります。 |
+| `ticket.enabled` | `true` | チケット機能を有効にするかどうかです。`false` にすると `/ticket` コマンド、データベースへの接続、MineAuth の HTTP API はいずれも登録されません。 |
+| `ticket.categories` | 5 件 (下記参照) | Dialog に表示するカテゴリーです。記述した順に表示され、先頭のカテゴリーが初期選択になります。 |
 | `ticket.webhook.url` | `""` | 新しいチケットを通知する Discord Webhook の URL です。空文字の場合は通知を行いません。 |
-| `ticket.database.file` | `"tickets.db"` | チケットを保存する SQLite データベースのファイルです。相対パスはプラグインのデータディレクトリを基準に解決されます。存在しないディレクトリは自動的に作成されます。 |
+
+チケットの保存先は、プラグイン全体で共有する `database` ブロックで設定します。
+SQLite / MySQL の切り替えなどは [データベース](/docs/database) を参照してください。
 
 ## カテゴリー
+
+デフォルトでは、次の 5 件のカテゴリーがこの順に表示されます。
+
+| `id` | `name` |
+|------|--------|
+| `protect` | 土地保護について |
+| `grief` | 荒らし、盗難について |
+| `recovery` | アイテム補填、データの復旧 |
+| `bug` | バグの報告 |
+| `other` | その他 |
 
 各カテゴリーは `id` と `name` を持ちます。
 
