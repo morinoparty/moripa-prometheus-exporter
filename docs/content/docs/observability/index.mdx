@@ -11,11 +11,6 @@ Observability は、Minecraft サーバー (Paper) およびプロキシ (Veloci
 プラグインを導入すると、サーバーやプロキシの JVM 内で軽量な HTTP サーバーが起動し、`/metrics` エンドポイントから Prometheus のテキスト形式でメトリクスを公開します。
 Prometheus 側は通常の `scrape_configs` でこのエンドポイントを定期的にスクレイプするだけで、追加のエージェントや中継サーバーは必要ありません。
 
-<Callout type="info">
-この機能は旧 `MoripaPrometheusExporter` を MoripaUtils に統合したものです。
-プロジェクト名は変更されましたが、公開されるメトリクス名 (`minecraft_*`, `velocity_*`, `jvm_*`, `process_*`) は変更されていないため、既存の Prometheus の設定や Grafana のダッシュボードはそのまま利用できます。
-</Callout>
-
 ## 公開されるメトリクス
 
 公開されるメトリクスは、稼働するプラットフォームごとにプレフィックスで区別されています。
