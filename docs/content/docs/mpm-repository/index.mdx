@@ -5,30 +5,42 @@ description: このサイトが配信する morinoparty の mpm リポジトリ�
 
 # mpm リポジトリ
 
-このサイト (`utils.plugin.morino.party`) は、Minecraft プラグインマネージャー [mpm](https://mpm.plugin.morino.party) のリポジトリグラフにおいて、morinoparty のノードとして機能します。
-morinoparty が開発しているプラグインの定義を配信し、さらに MineAuth や MoripaFishing などの個別プラグインが配信する子リポジトリへのリンクを持ちます。
+このサイト (`utils.plugin.morino.party`) は、Minecraft プラグインマネージャー [mpm](https://mpm.plugin.morino.party) のリモートリポジトリとして、morinoparty のプラグインの定義を配信します。
+morinoparty が開発しているプラグインの定義に加えて、MineAuth や MoripaFishing などの個別プラグインが配信する子リポジトリへのリンクを持ちます。
 
-以前は morinoparty のプラグイン定義を mpm の中央リポジトリ (`repo.mpm.nikomaru.dev`) が直接持っていましたが、現在はこのリポジトリに移管されています。
-中央リポジトリはこのサイトの `index.json` へのリンクだけを持ち、morinoparty のプラグインの追加や変更は中央リポジトリを変更せずに行えます。
+このリポジトリは mpm の中央リポジトリ (`repo.mpm.nikomaru.dev`) からは参照されていません。
+mpm 自身の定義は中央リポジトリが持っているため、このリポジトリには含まれません。
+
+## リポジトリの追加
+
+このリポジトリを利用する場合は、mpm の `config.json` にリモートソースとして追加します。
+
+```json
+{
+    "type": "remote",
+    "url": "https://utils.plugin.morino.party/mpm/paper/index.json"
+}
+```
+
+複数のソースは `config.json` の並び順で優先され、同名のプラグインは先に見つかった定義が採用されます。
+設定の詳細は mpm の [config.json の仕様](https://mpm.plugin.morino.party/docs/format/config) を参照してください。
 
 ## リポジトリグラフ
 
-mpm のクライアントは中央リポジトリの `index.json` を起点に、`children` に書かれたリンクを再帰的にたどってカタログを組み立てます。
+mpm のクライアントは、このサイトの `index.json` を起点に、`children` に書かれたリンクを再帰的にたどってカタログを組み立てます。
 このサイトの位置付けは次の図のとおりです。
 
 ```mermaid
 graph TD
-    central["中央リポジトリ<br/>repo.mpm.nikomaru.dev/paper/index.json"]
     morinoparty["morinoparty (このサイト)<br/>utils.plugin.morino.party/mpm/paper/index.json"]
     mineauth["MineAuth<br/>mineauth.plugin.morino.party/mpm/paper/index.json"]
     fishing["MoripaFishing<br/>fishing.plugin.morino.party/mpm/paper/index.json"]
 
-    central -->|children| morinoparty
     morinoparty -->|children| mineauth
     morinoparty -->|children| fishing
 ```
 
-同じ名前のプラグインが複数のノードに定義されている場合は、祖先側 (中央に近い側) の定義が優先されます。
+同じ名前のプラグインが複数のノードに定義されている場合は、祖先側 (起点に近い側) の定義が優先されます。
 そのため、子リポジトリが親の定義を上書きすることはできません。
 グラフの形式の詳細は mpm の [リポジトリグラフの仕様](https://mpm.plugin.morino.party/docs/repository/graph) を参照してください。
 
