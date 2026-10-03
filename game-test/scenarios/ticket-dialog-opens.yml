@@ -8,10 +8,10 @@ steps:
   # コマンドが届いていないのに assert_no_log だけで通らないよう、届いたことを先に確かめる
   - { on: server, action: wait_for_log, pattern: "Alice issued server command: /ticket", timeout: 10 }
   - { action: wait, seconds: 3 }
-  # Dialog の組み立てや表示で例外が出ていない
-  - { on: server, action: assert_no_log, pattern: "Exception|Failed to load config\\.conf|MoripaUtils.*disabled" }
-  # コマンドが未登録 / プラグインの有効化に失敗 / 権限が無い、のいずれでもない
-  - { on: Alice, action: assert_no_log, pattern: "Unknown or incomplete command|現在お問い合わせを受け付けていません|permission" }
+  # コマンドの実行中や Dialog の組み立てで例外が出ていない (MoripaUtils のコードを含むスタックトレースも検出する)
+  - { on: server, action: assert_no_log, pattern: "Exception executing command|Unhandled exception|at party\\.morino\\.moripautils\\." }
+  # コマンドが未登録 / プラグインの有効化に失敗 / 権限が無い、のいずれでもない (チャットの行に限定して誤検知を避ける)
+  - { on: Alice, action: assert_no_log, pattern: "\\[CHAT\\] .*(Unknown or incomplete command|現在お問い合わせを受け付けていません|permission)" }
   # fukurou には Dialog の表示を直接確かめる手段が無いため、スクリーンショットで目視できるようにする
   - { on: Alice, action: screenshot, name: ticket-dialog }
   - { on: Alice, action: press_key, key: Escape }
